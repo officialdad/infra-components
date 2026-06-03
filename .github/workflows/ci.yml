@@ -1,0 +1,45 @@
+name: ci
+
+# Lint + validate every module on PRs and pushes to main.
+# No cloud credentials needed — validation runs with the backend disabled.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [vpc, postgres-instance, app-alb]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.1
+
+      - name: terraform fmt
+        run: terraform -chdir=${{ matrix.component }}/terraform fmt -check -recursive
+
+      - name: terraform init (no backend)
+        run: terraform -chdir=${{ matrix.component }}/terraform init -backend=false -input=false
+
+      - name: terraform validate
+        run: terraform -chdir=${{ matrix.component }}/terraform validate
+
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: latest
+
+      - name: tflint
+        run: |
+          cd ${{ matrix.component }}/terraform
+          tflint --init --config="$GITHUB_WORKSPACE/.tflint.hcl"
+          tflint --config="$GITHUB_WORKSPACE/.tflint.hcl"

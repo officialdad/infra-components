@@ -1,0 +1,33 @@
+# Changelog
+
+All notable changes to the modules in this repo are recorded here.
+
+Format follows [Keep a Changelog](https://keepachangelog.com/), and this repo uses
+[Semantic Versioning](https://semver.org/) via git tags (`vMAJOR.MINOR.PATCH`).
+
+**How this connects to the environments repos:** `infra-environments-dev` tracks `main`, so the
+`[Unreleased]` changes below are what dev runs. When a change has soaked in dev, cut a tag (see
+[CONVENTIONS.md](./CONVENTIONS.md#releasing)) and the version moves out of `[Unreleased]`. Prod
+pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
+
+- **Added** — new modules/features.
+- **Changed** — changes to existing behavior (note if it affects inputs/outputs).
+- **Fixed** — bug fixes.
+- **Removed** — removed features (call out breaking changes loudly).
+
+## [Unreleased]
+
+_Nothing yet. Add entries here as you change modules; move them under a version when you tag._
+
+## [0.1.0] - 2026-06-03
+
+### Added
+- Initial module library:
+  - `vpc` — VPC with public/private subnets across AZs, IGW, public routing. Outputs
+    `vpc_id`, `subnet_ids_list_by_name`.
+  - `postgres-instance` — RDS PostgreSQL with subnet group, security group, generated
+    (sensitive) master password. Outputs `database_address`, `database_arn`, credentials.
+  - `app-alb` — public Application Load Balancer with security group, target group, HTTP listener.
+
+[Unreleased]: https://github.com/officialdad/infra-components/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/officialdad/infra-components/releases/tag/v0.1.0

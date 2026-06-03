@@ -1,0 +1,25 @@
+# Pre-commit hooks for the Terraform module library.
+# Install once:  pipx install pre-commit  (or pip)  &&  pre-commit install
+# Run on all files:  pre-commit run --all-files
+#
+# tflint hook needs tflint installed locally:  https://github.com/terraform-linters/tflint
+repos:
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.99.0
+    hooks:
+      - id: terraform_fmt
+      - id: terraform_validate
+      - id: terraform_tflint
+        args:
+          - --args=--config=__GIT_WORKING_DIR__/.tflint.hcl
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-merge-conflict
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: detect-private-key
+      - id: detect-aws-credentials
+        args: ["--allow-missing-credentials"]
+      - id: check-yaml

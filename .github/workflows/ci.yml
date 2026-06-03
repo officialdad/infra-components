@@ -23,7 +23,7 @@ jobs:
 
       - uses: hashicorp/setup-terraform@v4
         with:
-          terraform_version: 1.12.1
+          terraform_version: 1.15.5
 
       - name: terraform fmt
         run: terraform -chdir=${{ matrix.component }}/terraform fmt -check -recursive

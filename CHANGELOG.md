@@ -19,6 +19,12 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 
 _Nothing yet. Add entries here as you change modules; move them under a version when you tag._
 
+## [0.2.0] - 2026-06-03
+
+### Added
+- `dummy` — credential-free component (random/local/null providers) for exercising the full
+  CI/CD pipeline (plan → PR comment → gated apply) without a cloud account.
+
 ## [0.1.0] - 2026-06-03
 
 ### Added
@@ -29,5 +35,6 @@ _Nothing yet. Add entries here as you change modules; move them under a version 
     (sensitive) master password. Outputs `database_address`, `database_arn`, credentials.
   - `app-alb` — public Application Load Balancer with security group, target group, HTTP listener.
 
-[Unreleased]: https://github.com/officialdad/infra-components/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/officialdad/infra-components/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/officialdad/infra-components/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/officialdad/infra-components/releases/tag/v0.1.0

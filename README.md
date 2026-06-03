@@ -1,31 +1,38 @@
-# infra-components-template
+# infra-components
 
-A **sanitized, learning-oriented** Terraform module library, modeled on a production
-Terragrunt + Terraform setup. Each top-level directory is a **reusable component**; the actual
-Terraform lives in that component's `terraform/` subdirectory.
+A reusable Terraform module library for the `officialdad` infrastructure. Each top-level
+directory is a **component**; the actual Terraform lives in that component's `terraform/`
+subdirectory.
 
-These modules are meant to be consumed by a separate **environments** repo
-(see `infra-environments-template`) via a pinned git source:
+This repo is **public** so the environments repos can fetch modules over HTTPS with no auth.
+Modules are consumed via a pinned git source, e.g.:
 
 ```hcl
 terraform {
-  source = "git::https://github.com/<YOUR_ORG>/infra-components-template.git//<component>/terraform?ref=<tag>"
+  source = "git::https://github.com/officialdad/infra-components.git//<component>/terraform?ref=<tag>"
 }
 ```
 
 The `//<component>/terraform` part selects the subdirectory inside this repo, and `?ref=<tag>`
-pins a version (a git tag, branch, or commit). The environments repo decides which version of
-each component to use.
+pins a version. The environments repos decide which version of each component to use:
+`infra-environments-dev` tracks `main`; `infra-environments-prod` pins git tags.
+
+See **[CONVENTIONS.md](./CONVENTIONS.md)** for module anatomy, naming, and the release process,
+and **[CHANGELOG.md](./CHANGELOG.md)** for what changed in each tagged version.
 
 ## Components
 
-| Component           | Purpose                              | Key outputs                                   |
-| ------------------- | ------------------------------------ | --------------------------------------------- |
-| `vpc`               | Network foundation (VPC, subnets)    | `vpc_id`, `subnet_ids_list_by_name`           |
-| `postgres-instance` | RDS PostgreSQL instance              | `database_address`, `database_arn` (+secrets) |
-| `app-alb`           | Public Application Load Balancer     | `alb_dns_name`, `alb_arn`, `target_group_arn` |
+| Component           | Purpose                                          | Key outputs                                   |
+| ------------------- | ------------------------------------------------ | --------------------------------------------- |
+| `vpc`               | Network foundation (VPC, subnets)                | `vpc_id`, `subnet_ids_list_by_name`           |
+| `postgres-instance` | RDS PostgreSQL instance                          | `database_address`, `database_arn` (+secrets) |
+| `app-alb`           | Public Application Load Balancer                 | `alb_dns_name`, `alb_arn`, `target_group_arn` |
+| `dummy`             | Credential-free CI/CD test (random/local/null)   | `pet_name`, `artifact_path`                    |
 
-They form a natural dependency chain: **`vpc` → `postgres-instance` / `app-alb`**.
+`vpc`, `postgres-instance`, and `app-alb` form a dependency chain:
+**`vpc` → `postgres-instance` / `app-alb`**. `dummy` has no dependencies — it exists only to
+exercise the pipeline (plan → PR comment → gated apply) without a cloud account, and can be
+removed once real components are flowing.
 
 ## Anatomy of a component
 
@@ -33,7 +40,7 @@ Each component's `terraform/` directory follows the same layout:
 
 ```
 <component>/terraform/
-├── versions.tf     # required_terraform + required_providers
+├── versions.tf     # required_version + required_providers
 ├── variables.tf    # inputs (always includes a `global` object, see below)
 ├── main.tf         # the resources
 └── outputs.tf      # values consumed by downstream components
@@ -55,14 +62,20 @@ variable "global" {
 }
 ```
 
-## Versioning
+## Versioning & releasing
 
-Components are versioned with **git tags**. Tag a release and the environments repo references it
-via `?ref=<tag>`. For a starter setup you can also reference a branch (e.g. `?ref=main`) while
-iterating.
+Components are versioned with **git tags** (`vMAJOR.MINOR.PATCH`), consumed via `?ref=<tag>`.
+Dev can track a branch (`?ref=main`) while iterating; prod pins a tag. The full release/promotion
+process is in [CONVENTIONS.md](./CONVENTIONS.md#versioning--releasing).
 
-## This is a template
+## Toolchain
 
-- No real AWS account, credentials, or hostnames are referenced — all values are placeholders.
+- Terraform **1.15.5**, Terragrunt **1.0.7** (the environments repos pin these via
+  `.terraform-version` / `.terragrunt-version`).
+- CI (`.github/workflows/ci.yml`) runs `terraform fmt` / `validate` / `tflint` per component.
+
+## Notes
+
+- All values are placeholders — no real AWS account IDs, credentials, or hostnames.
 - Modules are minimal but **valid and applyable** (real resource blocks), so you can grow them.
-- Apply requires your own AWS credentials and a real state backend (configured in the env repo).
+- A real apply requires AWS credentials and a state backend, both configured in the env repos.

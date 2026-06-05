@@ -28,6 +28,7 @@ and **[CHANGELOG.md](./CHANGELOG.md)** for what changed in each tagged version.
 | `postgres-instance` | RDS PostgreSQL instance                          | `database_address`, `database_arn` (+secrets) |
 | `app-alb`           | Public Application Load Balancer                 | `alb_dns_name`, `alb_arn`, `target_group_arn` |
 | `dummy`             | Credential-free CI/CD test (random/local/null)   | `pet_name`, `artifact_path`                    |
+| `github`            | GitHub repositories as code (repo factory)       | `repository_names`, `repository_urls`         |
 
 `vpc`, `postgres-instance`, and `app-alb` form a dependency chain:
 **`vpc` → `postgres-instance` / `app-alb`**. `dummy` has no dependencies — it exists only to

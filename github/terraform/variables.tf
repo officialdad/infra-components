@@ -1,12 +1,3 @@
-variable "global" {
-  type = object({
-    environment_name = string
-    deploy_region    = string
-    tags             = map(string)
-  })
-  description = "Environment-wide context injected by the environments repo. Accepted for convention only — GitHub resources have no region/tags, so these values are unused by this component."
-}
-
 variable "github_owner" {
   type        = string
   description = "The GitHub organization (or user) the provider operates on."

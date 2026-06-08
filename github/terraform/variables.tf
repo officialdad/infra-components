@@ -7,7 +7,7 @@ variable "github_owner" {
 variable "default_team" {
   type        = string
   description = "Team slug granted access to every managed repo by default. Empty string disables the default grant. The team must already exist in the org."
-  default     = "engineering"
+  default     = "engineers"
 }
 
 variable "default_team_permission" {

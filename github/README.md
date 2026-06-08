@@ -43,7 +43,7 @@ export GITHUB_TOKEN=ghp_...
 | ------------------------- | ----------- | ------------- | ------------------------------------------------------------------ |
 | `global`                  | object      | —             | Env-wide context. Accepted for convention only; **unused** here.   |
 | `github_owner`            | string      | `officialdad` | The GitHub org (or user) the provider operates on.                 |
-| `default_team`            | string      | `engineering` | Team slug granted to every repo by default; `""` disables.         |
+| `default_team`            | string      | `engineers`   | Team slug granted to every repo by default; `""` disables.         |
 | `default_team_permission` | string      | `push`        | Default team's access: `pull`/`triage`/`push`/`maintain`/`admin`.  |
 | `repositories`            | map(object) | `{}`          | Repositories to manage, keyed by repo name (see shape below).      |
 

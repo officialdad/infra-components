@@ -69,15 +69,25 @@ Modules are versioned with **git tags** (`vMAJOR.MINOR.PATCH`), consumed via `?r
 
 1. Make the module change on a branch, open a PR, merge to `main`.
 2. `infra-environments-dev` (tracks `main`) picks it up — apply and let it soak.
-3. Move the change from `[Unreleased]` to a new version section in
-   [CHANGELOG.md](./CHANGELOG.md), with the date.
-4. Tag and push:
-   ```bash
-   git tag v0.2.0
-   git push origin v0.2.0
+3. Update [CHANGELOG.md](./CHANGELOG.md):
+   - Move `[Unreleased]` content into a new `## [X.Y.Z] - YYYY-MM-DD` section.
+   - Add a compare link at the bottom for the new version.
+   - Update the `[Unreleased]` link to `compare/vX.Y.Z...HEAD`.
    ```
+   [Unreleased]: https://github.com/officialdad/infra-components/compare/vX.Y.Z...HEAD
+   [X.Y.Z]: https://github.com/officialdad/infra-components/compare/vPREV...vX.Y.Z
+   ```
+4. Commit the CHANGELOG update, tag, and push both in one command:
+   ```bash
+   git add CHANGELOG.md
+   git commit -m "vX.Y.Z <short description>"
+   git tag vX.Y.Z
+   git push origin main vX.Y.Z
+   ```
+   `git push origin main vX.Y.Z` pushes the branch and tag atomically — avoids
+   the tag landing on a different commit if something races, and keeps the push log clean.
 5. Promote to prod: PR in `infra-environments-prod` bumping the component's `versions.hcl`
-   (`"v0.1.0"` → `"v0.2.0"`), reviewed, then apply.
+   (`"vOLD"` → `"vX.Y.Z"`), reviewed, then apply.
 
 ## Commits
 

@@ -17,7 +17,11 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 
 ## [Unreleased]
 
-_Nothing yet. Add entries here as you change modules; move them under a version when you tag._
+### Added
+- `github` — repository factory component (`integrations/github` provider). Manages GitHub
+  repos as code via a `repositories` map: visibility, description, topics, default branch, and
+  optional branch protection. First component requiring a credential (`GITHUB_TOKEN`); intended
+  to be owned by `infra-environments-dev` only, since repos are org-scoped.
 
 ## [0.2.0] - 2026-06-03
 

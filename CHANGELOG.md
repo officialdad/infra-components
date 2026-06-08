@@ -15,6 +15,15 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 - **Fixed** — bug fixes.
 - **Removed** — removed features (call out breaking changes loudly).
 
+## [Unreleased]
+
+### Changed
+- `github` — added per-repo `delete_branch_on_merge` (auto-deletes the head branch on merge,
+  default `true`) and an org-wide default-team grant: `default_team` (default `engineers`)
+  is granted `default_team_permission` (default `push`) on every managed repo via
+  `github_team_repository`; set `default_team = ""` to opt out. Adds a `team_grants` output.
+  The team grant requires `GITHUB_TOKEN` with `admin:org`.
+
 ## [0.3.0] - 2026-06-08
 
 ### Added

@@ -15,7 +15,7 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 - **Fixed** — bug fixes.
 - **Removed** — removed features (call out breaking changes loudly).
 
-## [Unreleased]
+## [0.3.0] - 2026-06-08
 
 ### Added
 - `github` — repository factory component (`integrations/github` provider). Manages GitHub

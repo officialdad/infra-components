@@ -12,11 +12,12 @@ provider "github" {
 resource "github_repository" "this" {
   for_each = var.repositories
 
-  name        = each.key
-  description = each.value.description
-  visibility  = each.value.visibility
-  topics      = each.value.topics
-  has_issues  = each.value.has_issues
+  name                   = each.key
+  description            = each.value.description
+  visibility             = each.value.visibility
+  topics                 = each.value.topics
+  has_issues             = each.value.has_issues
+  delete_branch_on_merge = each.value.delete_branch_on_merge
 
   # Give a newly-created repo an initial commit + default branch so the branch_default and
   # branch_protection resources below have something to point at. No-op on imported repos.
@@ -54,4 +55,15 @@ resource "github_branch_protection" "this" {
       contexts = each.value.branch_protection.required_status_checks
     }
   }
+}
+
+# Grants the org-wide default team access to every managed repo. Fanned out over the same
+# repositories map. The whole block is skipped when var.default_team is empty, so the
+# component still works in orgs that don't use a default team.
+resource "github_team_repository" "default" {
+  for_each = var.default_team == "" ? {} : var.repositories
+
+  team_id    = var.default_team
+  repository = github_repository.this[each.key].name
+  permission = var.default_team_permission
 }

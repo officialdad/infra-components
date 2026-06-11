@@ -7,31 +7,25 @@ variable "global" {
   description = "Environment-wide context injected by the environments repo (name, region, tags)."
 }
 
-variable "cidr_block" {
+variable "project_id" {
   type        = string
-  description = "The CIDR block for the VPC."
+  description = "GCP project the network is created in."
+}
+
+variable "subnet_cidr" {
+  type        = string
+  description = "Primary IPv4 range of the regional subnetwork."
   default     = "10.0.0.0/16"
 }
 
-variable "az_count" {
-  type        = number
-  description = "Number of availability zones to spread subnets across."
-  default     = 3
-
-  validation {
-    condition     = var.az_count >= 1 && var.az_count <= 3
-    error_message = "az_count must be between 1 and 3."
-  }
+variable "enable_cloud_nat" {
+  type        = bool
+  description = "Create Cloud Router + NAT so instances with no external IP get egress."
+  default     = true
 }
 
-variable "public_subnet_newbits" {
-  type        = number
-  description = "Additional bits to extend the VPC prefix by for each public subnet (cidrsubnet)."
-  default     = 8
-}
-
-variable "private_subnet_newbits" {
-  type        = number
-  description = "Additional bits to extend the VPC prefix by for each private subnet (cidrsubnet)."
-  default     = 8
+variable "enable_iap_ssh" {
+  type        = bool
+  description = "Allow SSH (tcp:22) from Google's IAP range so --tunnel-through-iap works."
+  default     = true
 }

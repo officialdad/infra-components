@@ -1,19 +1,29 @@
-output "vpc_id" {
-  value       = aws_vpc.this.id
-  description = "The ID of the VPC."
+output "network_name" {
+  value       = google_compute_network.this.name
+  description = "The VPC network name."
 }
 
-output "cidr_block" {
-  value       = aws_vpc.this.cidr_block
-  description = "The CIDR block of the VPC."
+output "network_self_link" {
+  value       = google_compute_network.this.self_link
+  description = "Network self link (pass to compute-engine.network)."
 }
 
-# Map of tier name -> list of subnet IDs. Downstream components index into this
-# (e.g. subnet_ids_list_by_name.private) the same way the reference setup does.
-output "subnet_ids_list_by_name" {
-  value = {
-    public  = aws_subnet.public[*].id
-    private = aws_subnet.private[*].id
-  }
-  description = "Subnet IDs grouped by tier name (public/private)."
+output "subnetwork_name" {
+  value       = google_compute_subnetwork.this.name
+  description = "The regional subnetwork name."
+}
+
+output "subnetwork_self_link" {
+  value       = google_compute_subnetwork.this.self_link
+  description = "Subnetwork self link (pass to compute-engine.subnetwork)."
+}
+
+output "region" {
+  value       = google_compute_subnetwork.this.region
+  description = "Region the subnetwork lives in."
+}
+
+output "ssh_tag" {
+  value       = local.ssh_tag
+  description = "Network tag that grants IAP SSH. Pass into a VM's network_tags to let it accept SSH (e.g. network_tags = [module.vpc.ssh_tag])."
 }

@@ -1,79 +1,69 @@
-provider "aws" {
-  region = var.global.deploy_region
-}
-
-data "aws_availability_zones" "available" {
-  state = "available"
+provider "google" {
+  project = var.project_id
+  region  = var.global.deploy_region
 }
 
 locals {
-  azs = slice(data.aws_availability_zones.available.names, 0, var.az_count)
-
   name_prefix = "${var.global.environment_name}-vpc"
-
-  common_tags = merge(var.global.tags, {
-    ManagedBy   = "terraform"
-    Environment = var.global.environment_name
-  })
+  ssh_tag     = "${var.global.environment_name}-ssh"
 }
 
-resource "aws_vpc" "this" {
-  cidr_block           = var.cidr_block
-  enable_dns_support   = true
-  enable_dns_hostnames = true
-
-  tags = merge(local.common_tags, { Name = local.name_prefix })
+# Custom-mode VPC: we declare the one subnet ourselves (no auto subnet in every region).
+resource "google_compute_network" "this" {
+  name                    = local.name_prefix
+  auto_create_subnetworks = false
+  routing_mode            = "REGIONAL"
 }
 
-resource "aws_internet_gateway" "this" {
-  vpc_id = aws_vpc.this.id
-
-  tags = merge(local.common_tags, { Name = "${local.name_prefix}-igw" })
+# One regional subnet. private_ip_google_access lets VMs reach Google APIs with no external IP.
+resource "google_compute_subnetwork" "this" {
+  name                     = "${local.name_prefix}-subnet"
+  ip_cidr_range            = var.subnet_cidr
+  region                   = var.global.deploy_region
+  network                  = google_compute_network.this.id
+  private_ip_google_access = true
 }
 
-# Public subnets — one per AZ, carved from the start of the VPC range.
-resource "aws_subnet" "public" {
-  count = var.az_count
-
-  vpc_id                  = aws_vpc.this.id
-  cidr_block              = cidrsubnet(var.cidr_block, var.public_subnet_newbits, count.index)
-  availability_zone       = local.azs[count.index]
-  map_public_ip_on_launch = true
-
-  tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-public-${local.azs[count.index]}"
-    Tier = "public"
-  })
+# Cloud Router + NAT = outbound internet for private VMs (e.g. to apt-install Docker).
+# Router is free; NAT bills ~$1/day while it exists — destroy it to stop idle charges.
+resource "google_compute_router" "this" {
+  count   = var.enable_cloud_nat ? 1 : 0
+  name    = "${local.name_prefix}-router"
+  region  = var.global.deploy_region
+  network = google_compute_network.this.id
 }
 
-# Private subnets — offset past the public range to avoid overlap.
-resource "aws_subnet" "private" {
-  count = var.az_count
-
-  vpc_id            = aws_vpc.this.id
-  cidr_block        = cidrsubnet(var.cidr_block, var.private_subnet_newbits, count.index + var.az_count)
-  availability_zone = local.azs[count.index]
-
-  tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-private-${local.azs[count.index]}"
-    Tier = "private"
-  })
+resource "google_compute_router_nat" "this" {
+  count                              = var.enable_cloud_nat ? 1 : 0
+  name                               = "${local.name_prefix}-nat"
+  router                             = google_compute_router.this[0].name
+  region                             = var.global.deploy_region
+  nat_ip_allocate_option             = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 }
 
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.this.id
+# Allow traffic between instances inside the VPC.
+resource "google_compute_firewall" "allow_internal" {
+  name    = "${local.name_prefix}-allow-internal"
+  network = google_compute_network.this.id
 
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.this.id
+  allow { protocol = "tcp" }
+  allow { protocol = "udp" }
+  allow { protocol = "icmp" }
+
+  source_ranges = [var.subnet_cidr]
+}
+
+# Allow SSH only from Google's IAP forwarders — no public SSH exposure.
+resource "google_compute_firewall" "allow_iap_ssh" {
+  count   = var.enable_iap_ssh ? 1 : 0
+  name    = "${local.name_prefix}-allow-iap-ssh"
+  network = google_compute_network.this.id
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
   }
 
-  tags = merge(local.common_tags, { Name = "${local.name_prefix}-public-rt" })
-}
-
-resource "aws_route_table_association" "public" {
-  count = var.az_count
-
-  subnet_id      = aws_subnet.public[count.index].id
-  route_table_id = aws_route_table.public.id
+  source_ranges = ["35.235.240.0/20"] # IAP's published TCP-forwarding range.
 }

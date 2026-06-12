@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        component: [vpc, postgres-instance, app-alb, dummy, github]
+        component: [network, compute-engine, github]
     steps:
       - uses: actions/checkout@v6
 

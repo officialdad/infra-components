@@ -14,12 +14,12 @@ variable "project_id" {
 
 variable "network" {
   type        = string
-  description = "Network self link or name (from vpc.network_self_link)."
+  description = "Network self link or name (from network.network_self_link)."
 }
 
 variable "subnetwork" {
   type        = string
-  description = "Subnetwork self link or name (from vpc.subnetwork_self_link)."
+  description = "Subnetwork self link or name (from network.subnetwork_self_link)."
 }
 
 variable "zone" {
@@ -66,6 +66,6 @@ variable "access_members" {
 
 variable "network_tags" {
   type        = list(string)
-  description = "Network tags applied to the VM. Each tag opts the VM into the VPC firewall rules that target it (e.g. [module.vpc.ssh_tag] to allow IAP SSH). Empty = no tag-scoped inbound."
+  description = "Network tags applied to the VM. Each tag opts the VM into the VPC firewall rules that target it (e.g. [module.network.ssh_tag] to allow IAP SSH). Empty = no tag-scoped inbound."
   default     = []
 }

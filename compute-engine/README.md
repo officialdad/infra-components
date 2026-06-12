@@ -17,9 +17,9 @@ IAM-governed keys (no public SSH port, no key files to manage).
 - `google_iap_tunnel_instance_iam_member` (per member) — grants **`roles/iap.tunnelResourceAccessor`**
   to each `access_members` principal, letting them open an IAP tunnel to the VM.
 
-Inbound SSH from the IAP range is allowed by the **`vpc` component's** `allow-iap-ssh` firewall rule,
-and outbound internet (for the Docker install) comes from the `vpc`'s Cloud NAT — so this module
-assumes it is attached to a `vpc` created by that component (or an equivalent network).
+Inbound SSH from the IAP range is allowed by the **`network` component's** `allow-iap-ssh` firewall rule,
+and outbound internet (for the Docker install) comes from the `network`'s Cloud NAT — so this module
+assumes it is attached to a `network` created by that component (or an equivalent network).
 
 ## Access model ("SSM-like")
 
@@ -62,7 +62,7 @@ inputs = {
 
 This keeps the cookbook module generic (any VM, any bootstrap) and puts the "what runs on boot"
 decision where environment-specific choices belong. A Docker bootstrap needs outbound internet
-(apt + docker.com), which the `vpc`'s Cloud NAT provides to this otherwise-private VM.
+(apt + docker.com), which the `network`'s Cloud NAT provides to this otherwise-private VM.
 
 ## Auth
 
@@ -77,8 +77,8 @@ must be enabled on the project.
 | ------------------- | ------------ | ------------------------ | ------------------------------------------------------------------------ |
 | `global`            | object       | —                        | Env-wide context (`environment_name`, `deploy_region`, `tags`).          |
 | `project_id`        | string       | —                        | GCP project the VM is created in.                                        |
-| `network`           | string       | —                        | Network self link / name (from `vpc.network_self_link`).                 |
-| `subnetwork`        | string       | —                        | Subnetwork self link / name (from `vpc.subnetwork_self_link`).           |
+| `network`           | string       | —                        | Network self link / name (from `network.network_self_link`).            |
+| `subnetwork`        | string       | —                        | Subnetwork self link / name (from `network.subnetwork_self_link`).      |
 | `zone`              | string       | `""`                     | Zone for the VM. Empty → `"<deploy_region>-a"`.                          |
 | `machine_type`      | string       | `e2-micro`               | Machine type.                                                            |
 | `boot_image`        | string       | `debian-cloud/debian-12` | Boot image (`project/family` or full self link).                         |
@@ -99,5 +99,5 @@ must be enabled on the project.
 
 ## Dependencies
 
-Consumes `network` and `subnetwork` from the `vpc` component. Relies on the `vpc`'s `allow-iap-ssh`
+Consumes `network` and `subnetwork` from the `network` component. Relies on the `network`'s `allow-iap-ssh`
 firewall rule (inbound SSH from IAP) and Cloud NAT (outbound, for the Docker install).

@@ -28,8 +28,8 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
   **OS Login + IAP TCP forwarding**
   (`gcloud compute ssh --tunnel-through-iap`), governed by IAM. Grants `roles/compute.osLogin`
   and `roles/iap.tunnelResourceAccessor` to `access_members`. Opts into VPC firewall rules via
-  `network_tags` (e.g. `[vpc.ssh_tag]`); empty default = no tag-scoped inbound. Consumes
-  `network`/`subnetwork` from the `vpc` component. Built for cheap teardown/redeploy (no deletion protection, boot disk
+  `network_tags` (e.g. `[network.ssh_tag]`); empty default = no tag-scoped inbound. Consumes
+  `network`/`subnetwork` from the `network` component. Built for cheap teardown/redeploy (no deletion protection, boot disk
   auto-deletes, `allow_stopping_for_update`), so the VM can be destroyed when idle to save credits.
   Outputs `instance_name`, `internal_ip`, `ssh_command`.
 - `github` — repository factory component (`integrations/github` provider). Manages GitHub
@@ -38,14 +38,17 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
   to be owned by `infra-environments-dev` only, since repos are org-scoped.
 
 ### Changed
-- **`vpc` — rewritten AWS → GCP (breaking).** Was an AWS VPC (IGW, public/private subnets per
-  AZ); now a `google_compute_network` + one **regional** `google_compute_subnetwork` (Private
-  Google Access on), optional **Cloud Router + Cloud NAT** (`enable_cloud_nat`, default `true`)
-  for private-instance egress, and firewall rules including **allow-IAP-SSH** from
-  `35.235.240.0/20` (`enable_iap_ssh`, default `true`), **scoped by `target_tags` to VMs wearing
-  the exported `ssh_tag`** (multi-VM ready). New input `project_id`. **Outputs changed:**
-  `vpc_id`/`cidr_block`/`subnet_ids_list_by_name` → `network_self_link`, `subnetwork_self_link`,
-  `network_name`, `subnetwork_name`, `region`, `ssh_tag`. Callers must update.
+- **`network` (replaces AWS `vpc`) — GCP network foundation built on registry modules.** The old
+  AWS `vpc` (IGW, public/private subnets per AZ) is gone; the new `network` component is a thin
+  wrapper over the verified CFT modules `terraform-google-modules/network/google` (`~> 18.0`) and
+  `terraform-google-modules/cloud-router/google` (`~> 9.0`). It creates a custom-mode VPC network
+  + one **regional** subnetwork (Private Google Access on), optional **Cloud Router + NAT**
+  (`enable_cloud_nat`, default `true`) for private-instance egress, and an **allow-IAP-SSH** rule
+  from `35.235.240.0/20` (`enable_iap_ssh`, default `true`) **scoped by `target_tags` to VMs
+  wearing the exported `ssh_tag`** (multi-VM ready). Inputs `project_id`, `subnet_cidr`. Outputs
+  `network_self_link`, `subnetwork_self_link`, `network_name`, `subnetwork_name`, `region`,
+  `ssh_tag`. Pulls in the `google-beta` provider (required by the network module). Replaces the
+  hand-written `vpc` rewrite that previously lived on this branch.
 - `github` — added per-repo `delete_branch_on_merge` (auto-deletes the head branch on merge,
   default `true`) and an org-wide default-team grant: `default_team` (default `engineers`)
   is granted `default_team_permission` (default `push`) on every managed repo via

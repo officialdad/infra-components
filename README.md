@@ -27,12 +27,12 @@ and **[CHANGELOG.md](./CHANGELOG.md)** for what changed in each tagged version.
 
 | Component        | Cloud  | Purpose                                          | Key outputs                                     |
 | ---------------- | ------ | ------------------------------------------------ | ----------------------------------------------- |
-| `vpc`            | GCP    | Network foundation (network, subnetwork, NAT)    | `network_self_link`, `subnetwork_self_link`     |
+| `network`        | GCP    | Network foundation — wraps CFT network + cloud-router modules | `network_self_link`, `subnetwork_self_link`, `ssh_tag` |
 | `compute-engine` | GCP    | VM (bootstrap-agnostic); OS Login + IAP access, no public IP | `instance_name`, `internal_ip`, `ssh_command` |
 | `github`         | GitHub | GitHub repositories as code (repo factory)       | `repository_names`, `repository_urls`           |
 
-`vpc` and `compute-engine` form a dependency chain:
-**`vpc` → `compute-engine`** (the VM attaches to the network/subnetwork the `vpc` outputs).
+`network` and `compute-engine` form a dependency chain:
+**`network` → `compute-engine`** (the VM attaches to the network/subnetwork the `network` outputs).
 `github` is standalone (org-scoped, no network).
 
 ## Anatomy of a component

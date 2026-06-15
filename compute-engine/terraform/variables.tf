@@ -9,8 +9,7 @@ variable "global" {
 
 variable "project_id" {
   type        = string
-  description = "GCP project the VMs are created in. Defaults to the dev project; override per environment."
-  default     = "master-dreamer-498805-d6"
+  description = "GCP project the VMs are created in. Required — set per environment so a forgotten value fails loudly instead of silently landing resources in the wrong project (e.g. prod into dev)."
 }
 
 variable "network" {
@@ -25,8 +24,8 @@ variable "subnetwork" {
 
 variable "access_members" {
   type        = list(string)
-  description = "IAM principals granted OS Login + IAP tunnel access on EVERY VM. Defaults to the org's two engineers; override to change who can SSH."
-  default     = ["user:sydazm06@gmail.com", "user:ariff.azman@doubleadigital.my"]
+  description = "IAM principals (user:/group:/serviceAccount:) granted OS Login + IAP tunnel access on EVERY VM. Empty = no SSH access; each environment opts in its own people."
+  default     = []
 }
 
 variable "instances" {

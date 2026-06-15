@@ -22,18 +22,18 @@ and **[CHANGELOG.md](./CHANGELOG.md)** for what changed in each tagged version.
 
 ## Components
 
-| Component           | Purpose                                          | Key outputs                                   |
-| ------------------- | ------------------------------------------------ | --------------------------------------------- |
-| `vpc`               | Network foundation (VPC, subnets)                | `vpc_id`, `subnet_ids_list_by_name`           |
-| `postgres-instance` | RDS PostgreSQL instance                          | `database_address`, `database_arn` (+secrets) |
-| `app-alb`           | Public Application Load Balancer                 | `alb_dns_name`, `alb_arn`, `target_group_arn` |
-| `dummy`             | Credential-free CI/CD test (random/local/null)   | `pet_name`, `artifact_path`                    |
-| `github`            | GitHub repositories as code (repo factory)       | `repository_names`, `repository_urls`         |
+> **Cloud:** GCP (`hashicorp/google`). The original AWS modules have been removed in the GCP
+> pivot — see [CHANGELOG.md](./CHANGELOG.md).
 
-`vpc`, `postgres-instance`, and `app-alb` form a dependency chain:
-**`vpc` → `postgres-instance` / `app-alb`**. `dummy` has no dependencies — it exists only to
-exercise the pipeline (plan → PR comment → gated apply) without a cloud account, and can be
-removed once real components are flowing.
+| Component        | Cloud  | Purpose                                          | Key outputs                                     |
+| ---------------- | ------ | ------------------------------------------------ | ----------------------------------------------- |
+| `network`        | GCP    | Network foundation — wraps CFT network + cloud-router modules | `network_self_link`, `subnetwork_self_link`, `ssh_tag` |
+| `compute-engine` | GCP    | VM (bootstrap-agnostic); OS Login + IAP access, no public IP | `instance_name`, `internal_ip`, `ssh_command` |
+| `github`         | GitHub | GitHub repositories as code (repo factory)       | `repository_names`, `repository_urls`           |
+
+`network` and `compute-engine` form a dependency chain:
+**`network` → `compute-engine`** (the VM attaches to the network/subnetwork the `network` outputs).
+`github` is standalone (org-scoped, no network).
 
 ## Anatomy of a component
 
@@ -77,6 +77,7 @@ process is in [CONVENTIONS.md](./CONVENTIONS.md#versioning--releasing).
 
 ## Notes
 
-- All values are placeholders — no real AWS account IDs, credentials, or hostnames.
+- All values are placeholders — no real GCP project IDs, credentials, or hostnames.
 - Modules are minimal but **valid and applyable** (real resource blocks), so you can grow them.
-- A real apply requires AWS credentials and a state backend, both configured in the env repos.
+- A real apply requires GCP credentials (a project + enabled APIs) and a state backend, both
+  configured in the env repos.

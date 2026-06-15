@@ -9,63 +9,36 @@ variable "global" {
 
 variable "project_id" {
   type        = string
-  description = "GCP project the VM is created in."
+  description = "GCP project the VMs are created in. Defaults to the dev project; override per environment."
+  default     = "master-dreamer-498805-d6"
 }
 
 variable "network" {
   type        = string
-  description = "Network self link or name (from network.network_self_link)."
+  description = "Network self link or name (from network.network_self_link). Shared by all instances."
 }
 
 variable "subnetwork" {
   type        = string
-  description = "Subnetwork self link or name (from network.subnetwork_self_link)."
-}
-
-variable "zone" {
-  type        = string
-  description = "Zone for the VM. Empty string -> \"<deploy_region>-a\"."
-  default     = ""
-}
-
-variable "machine_type" {
-  type        = string
-  description = "Machine type."
-  default     = "e2-micro"
-}
-
-variable "boot_image" {
-  type        = string
-  description = "Boot image as project/family or a full self link."
-  default     = "debian-cloud/debian-12"
-}
-
-variable "boot_disk_size_gb" {
-  type        = number
-  description = "Boot disk size in GB."
-  default     = 20
-}
-
-variable "startup_script" {
-  type        = string
-  description = "First-boot script (userdata) run via metadata_startup_script. \"\" = no bootstrap."
-  default     = ""
-}
-
-variable "assign_public_ip" {
-  type        = bool
-  description = "Attach an ephemeral external IP. Leave false for the IAP-only model."
-  default     = false
+  description = "Subnetwork self link or name (from network.subnetwork_self_link). Shared by all instances."
 }
 
 variable "access_members" {
   type        = list(string)
-  description = "IAM principals granted OS Login + IAP tunnel access (e.g. user:me@x.com)."
-  default     = []
+  description = "IAM principals granted OS Login + IAP tunnel access on EVERY VM. Defaults to the org's two engineers; override to change who can SSH."
+  default     = ["user:sydazm06@gmail.com", "user:ariff.azman@doubleadigital.my"]
 }
 
-variable "network_tags" {
-  type        = list(string)
-  description = "Network tags applied to the VM. Each tag opts the VM into the VPC firewall rules that target it (e.g. [module.network.ssh_tag] to allow IAP SSH). Empty = no tag-scoped inbound."
-  default     = []
+variable "instances" {
+  type = map(object({
+    machine_type      = optional(string, "e2-micro")
+    boot_image        = optional(string, "debian-cloud/debian-12")
+    boot_disk_size_gb = optional(number, 20)
+    zone              = optional(string, "")       # "" -> "<deploy_region>-a"
+    assign_public_ip  = optional(bool, false)      # false -> IAP-only, no public IP
+    startup_script    = optional(string, "")       # "" -> no bootstrap
+    network_tags      = optional(list(string), []) # [] -> no firewall tag opt-in
+  }))
+  description = "VMs to create, keyed by short name. Each entry overrides only the fields it needs; the rest take module defaults. VM name = \"<env>-compute-engine-<key>\"."
+  default     = {}
 }

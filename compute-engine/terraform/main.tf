@@ -6,22 +6,28 @@ provider "google" {
 locals {
   name_prefix = "${var.global.environment_name}-compute-engine"
 
-  # Default to zone "a" in the deploy region unless the caller pins one.
-  zone = var.zone != "" ? var.zone : "${var.global.deploy_region}-a"
-
   # GCP labels must be lowercase; only this subset of the tags convention maps cleanly.
   labels = {
     environment = lower(var.global.environment_name)
     managed_by  = "terraform"
   }
+
+  # member x instance -> one stable key per pair, so for_each never reindexes
+  # when a VM or a member is added/removed.
+  vm_access = {
+    for pair in setproduct(keys(var.instances), var.access_members) :
+    "${pair[0]}:${pair[1]}" => { instance = pair[0], member = pair[1] }
+  }
 }
 
 resource "google_compute_instance" "this" {
-  name         = local.name_prefix
-  machine_type = var.machine_type
-  zone         = local.zone
+  for_each = var.instances
+
+  name         = "${local.name_prefix}-${each.key}"
+  machine_type = each.value.machine_type
+  zone         = each.value.zone != "" ? each.value.zone : "${var.global.deploy_region}-a"
   labels       = local.labels
-  tags         = var.network_tags
+  tags         = each.value.network_tags
 
   # Destroy-friendly: no accidental lock, and changing machine_type stops the VM
   # instead of forcing a full recreate.
@@ -31,8 +37,8 @@ resource "google_compute_instance" "this" {
   boot_disk {
     auto_delete = true # disk is deleted with the VM -> no orphaned disk cost
     initialize_params {
-      image = var.boot_image
-      size  = var.boot_disk_size_gb
+      image = each.value.boot_image
+      size  = each.value.boot_disk_size_gb
     }
   }
 
@@ -42,7 +48,7 @@ resource "google_compute_instance" "this" {
 
     # Emitting access_config = an external IP. Omit it (default) = no public IP.
     dynamic "access_config" {
-      for_each = var.assign_public_ip ? [1] : []
+      for_each = each.value.assign_public_ip ? [1] : []
       content {}
     }
   }
@@ -52,25 +58,25 @@ resource "google_compute_instance" "this" {
   }
 
   # Caller-supplied userdata; null (unset) when empty.
-  metadata_startup_script = var.startup_script != "" ? var.startup_script : null
+  metadata_startup_script = each.value.startup_script != "" ? each.value.startup_script : null
 }
 
-# OS Login: who may SSH in (identity-based).
+# OS Login: who may SSH in (identity-based). Every member on every VM.
 resource "google_compute_instance_iam_member" "os_login" {
-  for_each      = toset(var.access_members)
+  for_each      = local.vm_access
   project       = var.project_id
-  zone          = local.zone
-  instance_name = google_compute_instance.this.name
+  zone          = google_compute_instance.this[each.value.instance].zone
+  instance_name = google_compute_instance.this[each.value.instance].name
   role          = "roles/compute.osLogin"
-  member        = each.value
+  member        = each.value.member
 }
 
-# IAP: who may open the tunnel that reaches the (private) VM's SSH port.
+# IAP: who may open the tunnel that reaches each (private) VM's SSH port.
 resource "google_iap_tunnel_instance_iam_member" "tunnel" {
-  for_each = toset(var.access_members)
+  for_each = local.vm_access
   project  = var.project_id
-  zone     = local.zone
-  instance = google_compute_instance.this.name
+  zone     = google_compute_instance.this[each.value.instance].zone
+  instance = google_compute_instance.this[each.value.instance].name
   role     = "roles/iap.tunnelResourceAccessor"
-  member   = each.value
+  member   = each.value.member
 }

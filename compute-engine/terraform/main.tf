@@ -4,8 +4,6 @@ provider "google" {
 }
 
 locals {
-  name_prefix = "${var.global.environment_name}-compute-engine"
-
   # GCP labels must be lowercase; only this subset of the tags convention maps cleanly.
   labels = {
     environment = lower(var.global.environment_name)
@@ -23,7 +21,7 @@ locals {
 resource "google_compute_instance" "this" {
   for_each = var.instances
 
-  name         = "${local.name_prefix}-${each.key}"
+  name         = "${var.global.environment_name}-${each.key}"
   machine_type = each.value.machine_type
   zone         = each.value.zone != "" ? each.value.zone : "${var.global.deploy_region}-a"
   labels       = local.labels

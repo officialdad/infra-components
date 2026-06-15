@@ -21,7 +21,8 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 - **`compute-engine` now manages many VMs, and no longer hard-codes environment identity.**
   - **Multi-VM:** the single hard-coded `google_compute_instance` is replaced by an `instances`
     map fanned out with `for_each` (mirrors `github`'s `repositories` pattern) — add a map key to
-    add a VM. Per-VM spec (`machine_type`, `boot_image`, `boot_disk_size_gb`, `zone`,
+    add a VM. VM name is `<environment_name>-<key>` (the map key is the name, env-prefixed —
+    e.g. `postiz` → `dev-postiz`). Per-VM spec (`machine_type`, `boot_image`, `boot_disk_size_gb`, `zone`,
     `assign_public_ip`, `startup_script`, `network_tags`) moved from top-level vars into each map
     entry, all `optional(...)` with cost-safe defaults. IAM grants fan out **member × VM** via
     `setproduct` on stable keys (no reindex churn). Outputs collapse to a single `instances` map

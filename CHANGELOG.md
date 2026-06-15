@@ -17,6 +17,10 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [0.4.0] - 2026-06-15
+
 > **Cloud pivot:** the org is moving to **GCP**. New components target `hashicorp/google`; the
 > AWS modules have been removed (see **Removed** below).
 
@@ -32,10 +36,6 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
   `network`/`subnetwork` from the `network` component. Built for cheap teardown/redeploy (no deletion protection, boot disk
   auto-deletes, `allow_stopping_for_update`), so the VM can be destroyed when idle to save credits.
   Outputs `instance_name`, `internal_ip`, `ssh_command`.
-- `github` — repository factory component (`integrations/github` provider). Manages GitHub
-  repos as code via a `repositories` map: visibility, description, topics, default branch, and
-  optional branch protection. First component requiring a credential (`GITHUB_TOKEN`); intended
-  to be owned by `infra-environments-dev` only, since repos are org-scoped.
 
 ### Changed
 - **`network` (replaces AWS `vpc`) — GCP network foundation built on registry modules.** The old
@@ -61,7 +61,15 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
   Removed as part of the GCP pivot rather than left as dead AWS modules. Recoverable from git
   history; will be replaced by GCP equivalents (Cloud Load Balancing / Cloud SQL) if needed.
 - **`dummy` — deleted.** The credential-free pipeline-test stub (random/local/null) has served
-  its purpose now that real GCP components (`vpc`, `compute-engine`) exercise the pipeline.
+  its purpose now that real GCP components (`network`, `compute-engine`) exercise the pipeline.
+
+## [0.3.0] - 2026-06-08
+
+### Added
+- `github` — repository factory component (`integrations/github` provider). Manages GitHub
+  repos as code via a `repositories` map: visibility, description, topics, default branch, and
+  optional branch protection. First component requiring a credential (`GITHUB_TOKEN`); intended
+  to be owned by `infra-environments-dev` only, since repos are org-scoped.
 
 ## [0.2.0] - 2026-06-03
 
@@ -79,7 +87,8 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
     (sensitive) master password. Outputs `database_address`, `database_arn`, credentials.
   - `app-alb` — public Application Load Balancer with security group, target group, HTTP listener.
 
-[Unreleased]: https://github.com/officialdad/infra-components/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/officialdad/infra-components/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/officialdad/infra-components/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/officialdad/infra-components/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/officialdad/infra-components/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/officialdad/infra-components/releases/tag/v0.1.0

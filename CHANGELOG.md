@@ -26,7 +26,8 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
     `assign_public_ip`, `startup_script`, `network_tags`) moved from top-level vars into each map
     entry, all `optional(...)` with cost-safe defaults. IAM grants fan out **member × VM** via
     `setproduct` on stable keys (no reindex churn). Outputs collapse to a single `instances` map
-    keyed by VM name (`name`, `instance_id`, `internal_ip`, `zone`, `ssh_command`).
+    keyed by VM key (the map key, not the full `<env>-<key>` VM name) — each value carries `name`,
+    `instance_id`, `internal_ip`, `zone`, `ssh_command`.
   - **Env identity out of the module:** `project_id` lost its dev-project default and is now
     **required** (a forgotten value fails loudly instead of silently provisioning into the wrong
     project); `access_members` now defaults to `[]` (no SSH) instead of two named engineers. A

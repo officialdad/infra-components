@@ -9,7 +9,7 @@ port, no key files to manage). The module is **bootstrap-agnostic** — it runs 
 
 ## What it creates
 
-For each entry in `instances` (keyed by short name; VM name = `<environment_name>-<key>`, so a `postiz` key → `dev-postiz`):
+For each entry in `instances` (keyed by a short name — that key also keys the `instances` **output**; the VM's GCP name is `<environment_name>-<key>`, so a `postiz` key → output `instances["postiz"]` whose `.name` is `dev-postiz`):
 
 - `google_compute_instance` — the VM. No external IP by default; `enable-oslogin = TRUE` so SSH
   access is governed by IAM, not project metadata keys. Runs that entry's `startup_script` on first

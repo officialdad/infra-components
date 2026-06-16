@@ -33,11 +33,16 @@ variable "instances" {
     machine_type      = optional(string, "e2-micro")
     boot_image        = optional(string, "debian-cloud/debian-12")
     boot_disk_size_gb = optional(number, 20)
-    zone              = optional(string, "")       # "" -> "<deploy_region>-a"
-    assign_public_ip  = optional(bool, false)      # false -> IAP-only, no public IP
-    startup_script    = optional(string, "")       # "" -> no bootstrap
-    network_tags      = optional(list(string), []) # [] -> no firewall tag opt-in
+    zone              = optional(string, "")
+    assign_public_ip  = optional(bool, false)
+    startup_script    = optional(string, "")
+    network_tags      = optional(list(string), [])
   }))
   description = "VMs to create, keyed by short name. Each entry overrides only the fields it needs; the rest take module defaults. VM name = \"<env>-<key>\"."
   default     = {}
+
+  validation {
+    condition     = alltrue([for k in keys(var.instances) : can(regex("^[a-z][a-z0-9-]{0,61}[a-z0-9]$|^[a-z]$", k))])
+    error_message = "Each instances key must be RFC1035: lowercase letter first, then lowercase/digits/hyphens, no trailing hyphen, ≤63 chars."
+  }
 }

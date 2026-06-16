@@ -17,7 +17,25 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 
 ## [Unreleased]
 
-_Nothing yet._
+### Changed
+- **`compute-engine` now manages many VMs, and no longer hard-codes environment identity.**
+  - **Multi-VM:** the single hard-coded `google_compute_instance` is replaced by an `instances`
+    map fanned out with `for_each` (mirrors `github`'s `repositories` pattern) — add a map key to
+    add a VM. VM name is `<environment_name>-<key>` (the map key is the name, env-prefixed —
+    e.g. `postiz` → `dev-postiz`). Per-VM spec (`machine_type`, `boot_image`, `boot_disk_size_gb`, `zone`,
+    `assign_public_ip`, `startup_script`, `network_tags`) moved from top-level vars into each map
+    entry, all `optional(...)` with cost-safe defaults. IAM grants fan out **member × VM** via
+    `setproduct` on stable keys (no reindex churn). Outputs collapse to a single `instances` map
+    keyed by VM key (the map key, not the full `<env>-<key>` VM name) — each value carries `name`,
+    `instance_id`, `internal_ip`, `zone`, `ssh_command`.
+  - **Env identity out of the module:** `project_id` lost its dev-project default and is now
+    **required** (a forgotten value fails loudly instead of silently provisioning into the wrong
+    project); `access_members` now defaults to `[]` (no SSH) instead of two named engineers. A
+    reusable module should know *how* to build a VM, not *where* or *who* — that belongs at the
+    call site. Cost-safe `how` defaults (`e2-micro`, `debian-12`, 20 GB) are unchanged.
+  - ⚠️ **Breaking:** existing state re-keys `google_compute_instance.this` → `this["<key>"]` (IAM
+    members too) — consumers must `terragrunt state mv` or recreate. Consumers must now set
+    `project_id` explicitly and list `access_members` (the empty default grants no access).
 
 ## [0.4.0] - 2026-06-15
 

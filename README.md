@@ -28,7 +28,7 @@ and **[CHANGELOG.md](./CHANGELOG.md)** for what changed in each tagged version.
 | Component        | Cloud  | Purpose                                          | Key outputs                                     |
 | ---------------- | ------ | ------------------------------------------------ | ----------------------------------------------- |
 | `network`        | GCP    | Network foundation — wraps CFT network + cloud-router modules | `network_self_link`, `subnetwork_self_link`, `ssh_tag` |
-| `compute-engine` | GCP    | VM (bootstrap-agnostic); OS Login + IAP access, no public IP | `instance_name`, `internal_ip`, `ssh_command` |
+| `compute-engine` | GCP    | One or more VMs (`instances` map, bootstrap-agnostic); OS Login + IAP access, no public IP | `instances` (map keyed by VM key) |
 | `github`         | GitHub | GitHub repositories as code (repo factory)       | `repository_names`, `repository_urls`           |
 
 `network` and `compute-engine` form a dependency chain:

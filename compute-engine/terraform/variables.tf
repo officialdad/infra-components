@@ -38,6 +38,6 @@ variable "instances" {
     startup_script    = optional(string, "")       # "" -> no bootstrap
     network_tags      = optional(list(string), []) # [] -> no firewall tag opt-in
   }))
-  description = "VMs to create, keyed by short name. Each entry overrides only the fields it needs; the rest take module defaults. VM name = \"<env>-compute-engine-<key>\"."
+  description = "VMs to create, keyed by short name. Each entry overrides only the fields it needs; the rest take module defaults. VM name = \"<env>-<key>\"."
   default     = {}
 }

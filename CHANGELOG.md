@@ -17,25 +17,38 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 
 ## [Unreleased]
 
+> **Cloud pivot (again): GCP → AWS.** The 0.4.0 GCP rewrite is itself rewritten back to AWS.
+> `network` is renamed `vpc` and now wraps the AWS VPC module, and `compute-engine` is replaced by
+> `ec2`. The `global` +
+> `instances`-map interface (including the multi-VM `for_each` work merged in #4) carries over
+> verbatim; only the cloud resources and field names change. `github` is cloud-agnostic and untouched.
+
+### Added
+- **`ec2` — AWS EC2 compute component** (`hashicorp/aws ~> 6.0`), the AWS analog of the removed
+  `compute-engine`. One or more instances via an `instances` map (`for_each`) — add a key to add an
+  instance — each with **no public IP** by default. Access is **SSM Session Manager** (the IAP/OS
+  Login analog): an **egress-only** security group (no inbound SSH) plus an IAM instance profile with
+  the managed `AmazonSSMManagedInstanceCore` policy. **Bootstrap-agnostic** (`user_data` per instance,
+  `""` = none). AMI defaults to the latest **Amazon Linux 2023**, resolved per-region via the public
+  SSM parameter. Instance `Name` tag = `<environment_name>-<key>`; outputs a single `instances` map
+  keyed by instance key (`name`, `instance_id`, `private_ip`, `ssm_command`). Consumes `vpc_id` +
+  `subnet_id` from `vpc`. **`access_members` is dropped** — Session Manager rights are an IAM
+  concern on the *caller* (`ssm:StartSession`), not on the module.
+
 ### Changed
-- **`compute-engine` now manages many VMs, and no longer hard-codes environment identity.**
-  - **Multi-VM:** the single hard-coded `google_compute_instance` is replaced by an `instances`
-    map fanned out with `for_each` (mirrors `github`'s `repositories` pattern) — add a map key to
-    add a VM. VM name is `<environment_name>-<key>` (the map key is the name, env-prefixed —
-    e.g. `postiz` → `dev-postiz`). Per-VM spec (`machine_type`, `boot_image`, `boot_disk_size_gb`, `zone`,
-    `assign_public_ip`, `startup_script`, `network_tags`) moved from top-level vars into each map
-    entry, all `optional(...)` with cost-safe defaults. IAM grants fan out **member × VM** via
-    `setproduct` on stable keys (no reindex churn). Outputs collapse to a single `instances` map
-    keyed by VM key (the map key, not the full `<env>-<key>` VM name) — each value carries `name`,
-    `instance_id`, `internal_ip`, `zone`, `ssh_command`.
-  - **Env identity out of the module:** `project_id` lost its dev-project default and is now
-    **required** (a forgotten value fails loudly instead of silently provisioning into the wrong
-    project); `access_members` now defaults to `[]` (no SSH) instead of two named engineers. A
-    reusable module should know *how* to build a VM, not *where* or *who* — that belongs at the
-    call site. Cost-safe `how` defaults (`e2-micro`, `debian-12`, 20 GB) are unchanged.
-  - ⚠️ **Breaking:** existing state re-keys `google_compute_instance.this` → `this["<key>"]` (IAM
-    members too) — consumers must `terragrunt state mv` or recreate. Consumers must now set
-    `project_id` explicitly and list `access_members` (the empty default grants no access).
+- **`network` renamed `vpc` and rewritten GCP → AWS.** The directory `network/` is now `vpc/` (the
+  AWS-idiomatic name). The GCP custom-mode VPC (CFT modules, Cloud NAT, IAP-SSH
+  firewall, `ssh_tag`) is replaced by a thin wrapper over `terraform-aws-modules/vpc/aws` (`~> 6.0`):
+  a VPC + **per-AZ** private/public subnets (`az_count`, default `2`; each a `/20` via `cidrsubnet`)
+  + a single **NAT gateway** (`enable_nat_gateway`, default `true`) for private-instance egress.
+  Inputs become `cidr_block` / `az_count` / `enable_nat_gateway`; outputs become `vpc_id`,
+  `private_subnet_ids`, `public_subnet_ids`, `region`. **Env wiring changes:** `network_self_link` →
+  `vpc_id`, `subnetwork_self_link` → `private_subnet_ids[0]`.
+
+### Removed
+- **`compute-engine` (GCP) — deleted**, replaced by `ec2` above. Its multi-VM `instances`-map
+  interface (added in #4, never tagged) lives on in `ec2`; the GCP-specific access model (OS Login +
+  IAP, `access_members`) does not. Recoverable from git history.
 
 ## [0.4.0] - 2026-06-15
 

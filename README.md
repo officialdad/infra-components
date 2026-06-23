@@ -22,17 +22,17 @@ and **[CHANGELOG.md](./CHANGELOG.md)** for what changed in each tagged version.
 
 ## Components
 
-> **Cloud:** GCP (`hashicorp/google`). The original AWS modules have been removed in the GCP
-> pivot — see [CHANGELOG.md](./CHANGELOG.md).
+> **Cloud:** AWS (`hashicorp/aws`). The earlier GCP modules have been rewritten back to AWS — see
+> [CHANGELOG.md](./CHANGELOG.md).
 
-| Component        | Cloud  | Purpose                                          | Key outputs                                     |
-| ---------------- | ------ | ------------------------------------------------ | ----------------------------------------------- |
-| `network`        | GCP    | Network foundation — wraps CFT network + cloud-router modules | `network_self_link`, `subnetwork_self_link`, `ssh_tag` |
-| `compute-engine` | GCP    | One or more VMs (`instances` map, bootstrap-agnostic); OS Login + IAP access, no public IP | `instances` (map keyed by VM key) |
-| `github`         | GitHub | GitHub repositories as code (repo factory)       | `repository_names`, `repository_urls`           |
+| Component | Cloud  | Purpose                                          | Key outputs                                     |
+| --------- | ------ | ------------------------------------------------ | ----------------------------------------------- |
+| `vpc`     | AWS    | Network foundation — wraps `terraform-aws-modules/vpc` (VPC + per-AZ subnets + NAT) | `vpc_id`, `private_subnet_ids`, `public_subnet_ids` |
+| `ec2`     | AWS    | One or more EC2 instances (`instances` map, bootstrap-agnostic); SSM Session Manager access, no public IP | `instances` (map keyed by instance key) |
+| `github`  | GitHub | GitHub repositories as code (repo factory)       | `repository_names`, `repository_urls`           |
 
-`network` and `compute-engine` form a dependency chain:
-**`network` → `compute-engine`** (the VM attaches to the network/subnetwork the `network` outputs).
+`vpc` and `ec2` form a dependency chain:
+**`vpc` → `ec2`** (instances launch into the subnets the `vpc` outputs).
 `github` is standalone (org-scoped, no network).
 
 ## Anatomy of a component
@@ -77,7 +77,6 @@ process is in [CONVENTIONS.md](./CONVENTIONS.md#versioning--releasing).
 
 ## Notes
 
-- All values are placeholders — no real GCP project IDs, credentials, or hostnames.
+- All values are placeholders — no real AWS account IDs, credentials, or hostnames.
 - Modules are minimal but **valid and applyable** (real resource blocks), so you can grow them.
-- A real apply requires GCP credentials (a project + enabled APIs) and a state backend, both
-  configured in the env repos.
+- A real apply requires AWS credentials and a state backend, both configured in the env repos.

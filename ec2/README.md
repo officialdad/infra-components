@@ -8,21 +8,27 @@ passes (e.g. a Docker install), but owns no userdata itself.
 
 ## What it creates
 
-For each entry in `instances` (keyed by a short name — that key also keys the `instances` **output**; the instance's `Name` tag is `<environment_name>-<key>`, so a `postiz` key → output `instances["postiz"]` whose `.name` is `dev-postiz`):
+This component is a **thin wrapper** over two verified registry modules — it manages no raw
+`aws_instance` / `aws_security_group` / IAM resources itself:
 
-- `aws_instance` — the EC2 instance. No public IP by default. AMI defaults to the latest Amazon
-  Linux 2023 (resolved per-region via the public SSM parameter), which ships the SSM agent
-  preinstalled. Runs that entry's `user_data` on first boot (empty string = no bootstrap).
-  **This module is bootstrap-agnostic** — the actual first-boot script is **userdata owned by the
-  consuming environment**, not baked into the module. See "Bootstrap / userdata" below.
+| Wraps | Version | Provides |
+| ----- | ------- | -------- |
+| [`terraform-aws-modules/ec2-instance/aws`](https://registry.terraform.io/modules/terraform-aws-modules/ec2-instance/aws) | `~> 6.0` | the instance + its IAM role/instance profile |
+| [`terraform-aws-modules/security-group/aws`](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws) | `~> 5.0` | a per-instance SG, with named ingress rules |
 
-Shared by every instance (created once):
+For each entry in `instances` (keyed by a short name — that key also keys the `instances` **output**; the instance's `Name` tag is `<environment_name>-<key>`, so a `postiz` key → output `instances["postiz"]` whose `.name` is `dev-postiz`), it builds:
 
-- `aws_security_group` — **egress-only** (all protocols to `0.0.0.0/0`), **no inbound rules**. SSM
-  reaches the instance outbound via the `vpc`'s NAT, so no ingress is needed.
-- `aws_iam_role` + `aws_iam_role_policy_attachment` + `aws_iam_instance_profile` — an instance
-  profile trusting `ec2.amazonaws.com` with the AWS-managed **`AmazonSSMManagedInstanceCore`**
-  policy attached. This is what lets the SSM agent register the instance for Session Manager.
+- **An EC2 instance** (ec2-instance module). No public IP by default; AMI defaults to the latest
+  Amazon Linux 2023 (the module's `ami_ssm_parameter`, per-region, SSM agent preinstalled);
+  **IMDSv2 is enforced** (`http_tokens = "required"`). Runs that entry's `user_data` on first boot
+  (empty = no bootstrap). The module also builds the instance's **IAM role + instance profile**
+  (`create_iam_instance_profile`) with the AWS-managed **`AmazonSSMManagedInstanceCore`** policy —
+  what registers the instance for Session Manager. **Bootstrap-agnostic** — the first-boot script is
+  **userdata owned by the consuming environment**, not baked in. See "Bootstrap / userdata" below.
+- **A per-instance security group** (security-group module). **Egress-only by default** (SSM dials
+  out via the `vpc`'s NAT, so no inbound is needed). Set `ingress_rules` to open named service ports
+  (e.g. `["prometheus-http-tcp"]` → 9090); these are reachable **from the VPC CIDR only**, never the
+  internet. See "Exposing a service" below.
 
 ## Access model ("SSM Session Manager")
 
@@ -43,6 +49,17 @@ Each `instances[<key>].ssm_command` output prints this for you. Unlike the GCP v
 `access_members`, **granting humans access is out of this module's scope** — Session Manager rights
 live on the *caller's* IAM (`ssm:StartSession` on the target), not on the instance. The instance side
 only needs the `AmazonSSMManagedInstanceCore` profile this module attaches.
+
+## Exposing a service
+
+`ingress_rules` opens **named** ports on that instance's own SG, scoped to the **VPC CIDR** — e.g. a
+Prometheus box uses `ingress_rules = ["prometheus-http-tcp"]` (9090). Rule names come from the
+security-group module's [predefined set](https://github.com/terraform-aws-modules/terraform-aws-security-group#available-rules)
+(`grafana-tcp`, `https-443-tcp`, …), so you reference a service by name and the port is baked in.
+
+This is for **east-west** (in-VPC) reachability only — public exposure is the **consuming
+environment's** job (e.g. a Cloudflare Tunnel or reverse proxy run via `user_data`), so this module
+stays cloud- and tool-agnostic. A box that only needs SSM keeps `ingress_rules = []` (egress-only).
 
 ## Bootstrap / userdata
 
@@ -94,6 +111,7 @@ Per-instance fields inside each `instances` entry (all optional):
 | `root_disk_size_gb` | `20`        | Root EBS volume size in GB.                                                  |
 | `assign_public_ip`  | `false`     | Attach a public IP. Leave `false` for the SSM-only model.                    |
 | `user_data`         | `""`        | First-boot script (userdata). Empty = no bootstrap. Supplied by the env.    |
+| `ingress_rules`     | `[]`        | Named SG ingress rules to open on this instance (e.g. `["prometheus-http-tcp"]`), reachable from the VPC CIDR only. Empty = SSM-only, no inbound. |
 
 > **No `access_members`:** the GCP version granted OS Login + IAP per principal because access lived
 > on the resource. On AWS, Session Manager access is an IAM concern on the *caller's* side

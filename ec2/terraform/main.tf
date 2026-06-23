@@ -2,13 +2,6 @@ provider "aws" {
   region = var.global.deploy_region
 }
 
-# Latest Amazon Linux 2023 AMI via the public SSM parameter (per-region resolved).
-# Standard AMI (SSM agent preinstalled), default kernel, x86_64. Path per AWS docs:
-# https://docs.aws.amazon.com/linux/al2023/ug/ec2.html
-data "aws_ssm_parameter" "al2023" {
-  name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
-}
-
 locals {
   common_tags = merge(var.global.tags, {
     ManagedBy   = "terraform"
@@ -16,63 +9,61 @@ locals {
   })
 }
 
-# Egress-only SG: SSM reaches the instance outbound (via NAT); no inbound SSH.
-resource "aws_security_group" "this" {
-  name_prefix = "${var.global.environment_name}-ec2-"
-  description = "Egress-only; access via SSM Session Manager (no inbound SSH)."
+# VPC CIDR, so named ingress rules are reachable from inside the network only.
+data "aws_vpc" "this" {
+  id = var.vpc_id
+}
+
+# Per-instance SG via the verified module: named ingress rules (e.g.
+# "prometheus-http-tcp" -> 9090) from the VPC CIDR; egress open so SSM reaches
+# the instance via NAT. Empty ingress_rules = egress-only (SSM-only, no inbound).
+module "sg" {
+  source  = "terraform-aws-modules/security-group/aws"
+  version = "~> 5.0"
+
+  for_each = var.instances
+
+  name        = "${var.global.environment_name}-${each.key}"
+  description = "Egress-all; named ingress from the VPC CIDR. Empty = SSM-only, no inbound."
   vpc_id      = var.vpc_id
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+  ingress_rules       = each.value.ingress_rules
+  ingress_cidr_blocks = [data.aws_vpc.this.cidr_block]
+  egress_rules        = ["all-all"]
 
   tags = local.common_tags
 }
 
-# Instance profile granting SSM Session Manager — the IAP/OS-Login analog.
-data "aws_iam_policy_document" "assume" {
-  statement {
-    actions = ["sts:AssumeRole"]
-    principals {
-      type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
-    }
-  }
-}
+# One or more EC2 instances via the verified module. No public IP by default;
+# access is SSM Session Manager (the module builds the IAM role + instance
+# profile from create_iam_instance_profile + the SSM managed policy). AMI
+# defaults to the latest Amazon Linux 2023 via the module's ami_ssm_parameter.
+# Bootstrap-agnostic: runs each instance's user_data, "" = none.
+module "ec2" {
+  source  = "terraform-aws-modules/ec2-instance/aws"
+  version = "~> 6.0"
 
-resource "aws_iam_role" "this" {
-  name_prefix        = "${var.global.environment_name}-ec2-ssm-"
-  assume_role_policy = data.aws_iam_policy_document.assume.json
-  tags               = local.common_tags
-}
-
-resource "aws_iam_role_policy_attachment" "ssm" {
-  role       = aws_iam_role.this.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-}
-
-resource "aws_iam_instance_profile" "this" {
-  name_prefix = "${var.global.environment_name}-ec2-"
-  role        = aws_iam_role.this.name
-}
-
-resource "aws_instance" "this" {
   for_each = var.instances
 
-  ami                         = each.value.ami != "" ? each.value.ami : data.aws_ssm_parameter.al2023.value
+  name = "${var.global.environment_name}-${each.key}"
+
   instance_type               = each.value.instance_type
+  ami                         = each.value.ami != "" ? each.value.ami : null
   subnet_id                   = var.subnet_id
-  vpc_security_group_ids      = [aws_security_group.this.id]
-  iam_instance_profile        = aws_iam_instance_profile.this.name
   associate_public_ip_address = each.value.assign_public_ip
   user_data                   = each.value.user_data != "" ? each.value.user_data : null
 
-  root_block_device {
-    volume_size = each.value.root_disk_size_gb
+  create_security_group  = false
+  vpc_security_group_ids = [module.sg[each.key].security_group_id]
+
+  create_iam_instance_profile = true
+  iam_role_policies = {
+    ssm = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
   }
 
-  tags = merge(local.common_tags, { Name = "${var.global.environment_name}-${each.key}" })
+  root_block_device = {
+    size = each.value.root_disk_size_gb
+  }
+
+  tags = local.common_tags
 }

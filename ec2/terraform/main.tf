@@ -3,7 +3,8 @@ provider "aws" {
 }
 
 # Latest Amazon Linux 2023 AMI via the public SSM parameter (per-region resolved).
-# UNVERIFIED until plan — confirm with: aws ssm get-parameters --names <this> --region <region>
+# Standard AMI (SSM agent preinstalled), default kernel, x86_64. Path per AWS docs:
+# https://docs.aws.amazon.com/linux/al2023/ug/ec2.html
 data "aws_ssm_parameter" "al2023" {
   name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
 }

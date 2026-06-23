@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        component: [network, compute-engine, github]
+        component: [vpc, ec2, github]
     steps:
       - uses: actions/checkout@v6
 

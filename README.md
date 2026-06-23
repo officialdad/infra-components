@@ -28,7 +28,7 @@ and **[CHANGELOG.md](./CHANGELOG.md)** for what changed in each tagged version.
 | Component        | Cloud  | Purpose                                          | Key outputs                                     |
 | ---------------- | ------ | ------------------------------------------------ | ----------------------------------------------- |
 | `vpc`            | AWS    | Network foundation — wraps `terraform-aws-modules/vpc` (VPC + per-AZ subnets + NAT) | `vpc_id`, `private_subnet_ids`, `public_subnet_ids` |
-| `ec2`            | AWS    | One or more EC2 instances (`instances` map, bootstrap-agnostic); SSM Session Manager access, no public IP | `instances` (map keyed by instance key) |
+| `ec2`            | AWS    | One or more EC2 instances (`instances` map, bootstrap-agnostic) via the `ec2-instance` + `security-group` modules; SSM access, no public IP, per-instance named `ingress_rules` | `instances` (map keyed by instance key) |
 | `network`        | GCP    | Network foundation — custom-mode VPC + regional subnet + Cloud NAT + IAP-SSH firewall (wraps Google Cloud Foundation Toolkit) | `network_name`, `subnetwork_self_link`, `ssh_tag` |
 | `compute-engine` | GCP    | One or more Compute Engine VMs (`instances` map, bootstrap-agnostic); OS Login + IAP access, no external IP | `instances` (map keyed by instance key) |
 | `github`         | GitHub | GitHub repositories as code (repo factory)       | `repository_names`, `repository_urls`           |

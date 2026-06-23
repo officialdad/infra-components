@@ -36,8 +36,10 @@ module "sg" {
 
 # One or more EC2 instances via the verified module. No public IP by default;
 # access is SSM Session Manager (the module builds the IAM role + instance
-# profile from create_iam_instance_profile + the SSM managed policy). AMI
-# defaults to the latest Amazon Linux 2023 via the module's ami_ssm_parameter.
+# profile from create_iam_instance_profile + the SSM managed policy).
+# AMI selection per instance: literal ami wins; else ami_ssm_parameter tracks the
+# latest image (defaults to Amazon Linux 2023). Lets an env pick its OS (e.g. Ubuntu)
+# without hardcoding a region-locked AMI id.
 # Bootstrap-agnostic: runs each instance's user_data, "" = none.
 module "ec2" {
   source  = "terraform-aws-modules/ec2-instance/aws"
@@ -49,6 +51,7 @@ module "ec2" {
 
   instance_type               = each.value.instance_type
   ami                         = each.value.ami != "" ? each.value.ami : null
+  ami_ssm_parameter           = each.value.ami_ssm_parameter != "" ? each.value.ami_ssm_parameter : "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
   subnet_id                   = var.subnet_id
   associate_public_ip_address = each.value.assign_public_ip
   user_data                   = each.value.user_data != "" ? each.value.user_data : null

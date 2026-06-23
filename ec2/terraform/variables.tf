@@ -21,12 +21,13 @@ variable "instances" {
   type = map(object({
     instance_type     = optional(string, "t3.micro")
     ami               = optional(string, "")
+    ami_ssm_parameter = optional(string, "")
     root_disk_size_gb = optional(number, 20)
     assign_public_ip  = optional(bool, false)
     user_data         = optional(string, "")
     ingress_rules     = optional(list(string), [])
   }))
-  description = "EC2 instances to create, keyed by short name. Each entry overrides only the fields it needs; the rest take module defaults. Instance Name tag = \"<env>-<key>\". Empty ami = latest Amazon Linux 2023. ingress_rules are named rules from terraform-aws-modules/security-group (e.g. [\"prometheus-http-tcp\"]); empty = SSM-only, no inbound. Each instance gets its own SG, reachable from the VPC CIDR only."
+  description = "EC2 instances to create, keyed by short name. Each entry overrides only the fields it needs; the rest take module defaults. Instance Name tag = \"<env>-<key>\". OS selection: set ami to a literal AMI id (wins if set), OR set ami_ssm_parameter to a public SSM parameter to track the latest image (e.g. Ubuntu: \"/aws/service/canonical/ubuntu/server/26.04/stable/current/amd64/hvm/ebs-gp3/ami-id\"); both empty = latest Amazon Linux 2023. ingress_rules are named rules from terraform-aws-modules/security-group (e.g. [\"prometheus-http-tcp\"]); empty = SSM-only, no inbound. Each instance gets its own SG, reachable from the VPC CIDR only."
   default     = {}
 
   validation {

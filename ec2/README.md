@@ -18,9 +18,10 @@ This component is a **thin wrapper** over two verified registry modules — it m
 
 For each entry in `instances` (keyed by a short name — that key also keys the `instances` **output**; the instance's `Name` tag is `<environment_name>-<key>`, so a `postiz` key → output `instances["postiz"]` whose `.name` is `dev-postiz`), it builds:
 
-- **An EC2 instance** (ec2-instance module). No public IP by default; AMI defaults to the latest
-  Amazon Linux 2023 (the module's `ami_ssm_parameter`, per-region, SSM agent preinstalled);
-  **IMDSv2 is enforced** (`http_tokens = "required"`). Runs that entry's `user_data` on first boot
+- **An EC2 instance** (ec2-instance module). No public IP by default; OS is selectable per instance —
+  a literal `ami` id wins, else `ami_ssm_parameter` tracks the latest image for that OS, resolved
+  per-region via SSM (default: Amazon Linux 2023; e.g. point it at Canonical's parameter to track
+  latest Ubuntu); **IMDSv2 is enforced** (`http_tokens = "required"`). Runs that entry's `user_data` on first boot
   (empty = no bootstrap). The module also builds the instance's **IAM role + instance profile**
   (`create_iam_instance_profile`) with the AWS-managed **`AmazonSSMManagedInstanceCore`** policy —
   what registers the instance for Session Manager. **Bootstrap-agnostic** — the first-boot script is
@@ -45,10 +46,10 @@ Connect with:
 aws ssm start-session --target <instance-id> --region <region>
 ```
 
-Each `instances[<key>].ssm_command` output prints this for you. Unlike the GCP version's
-`access_members`, **granting humans access is out of this module's scope** — Session Manager rights
-live on the *caller's* IAM (`ssm:StartSession` on the target), not on the instance. The instance side
-only needs the `AmazonSSMManagedInstanceCore` profile this module attaches.
+Each `instances[<key>].ssm_command` output prints this for you. **Granting humans access is out of
+this module's scope** — Session Manager rights live on the *caller's* IAM (`ssm:StartSession` on the
+target), not on the instance. The instance side only needs the `AmazonSSMManagedInstanceCore` profile
+this module attaches.
 
 ## Exposing a service
 
@@ -107,14 +108,14 @@ Per-instance fields inside each `instances` entry (all optional):
 | Field               | Default     | Description                                                                  |
 | ------------------- | ----------- | --------------------------------------------------------------------------- |
 | `instance_type`     | `t3.micro`  | EC2 instance type.                                                          |
-| `ami`               | `""`        | AMI id. Empty → latest Amazon Linux 2023 (resolved per-region via SSM).      |
+| `ami`               | `""`        | Literal AMI id (wins if set). Empty → resolve via `ami_ssm_parameter`.       |
+| `ami_ssm_parameter` | `""`        | Public SSM parameter tracking the latest image for an OS, resolved per-region. Empty → latest Amazon Linux 2023. E.g. Ubuntu 26.04: `/aws/service/canonical/ubuntu/server/26.04/stable/current/amd64/hvm/ebs-gp3/ami-id`. |
 | `root_disk_size_gb` | `20`        | Root EBS volume size in GB.                                                  |
 | `assign_public_ip`  | `false`     | Attach a public IP. Leave `false` for the SSM-only model.                    |
 | `user_data`         | `""`        | First-boot script (userdata). Empty = no bootstrap. Supplied by the env.    |
 | `ingress_rules`     | `[]`        | Named SG ingress rules to open on this instance (e.g. `["prometheus-http-tcp"]`), reachable from the VPC CIDR only. Empty = SSM-only, no inbound. |
 
-> **No `access_members`:** the GCP version granted OS Login + IAP per principal because access lived
-> on the resource. On AWS, Session Manager access is an IAM concern on the *caller's* side
+> **No `access_members`:** Session Manager access is an IAM concern on the *caller's* side
 > (`ssm:StartSession`), so it has no place in this module. Env identity (`vpc_id`, `subnet_id`) is
 > required with no default; the cost-safe *how* knobs (`t3.micro`, 20 GB) keep defaults, since a
 > forgotten value there is harmless.

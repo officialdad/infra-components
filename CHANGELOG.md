@@ -17,38 +17,31 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 
 ## [Unreleased]
 
-> **Cloud pivot (again): GCP → AWS.** The 0.4.0 GCP rewrite is itself rewritten back to AWS.
-> `network` is renamed `vpc` and now wraps the AWS VPC module, and `compute-engine` is replaced by
-> `ec2`. The `global` +
-> `instances`-map interface (including the multi-VM `for_each` work merged in #4) carries over
-> verbatim; only the cloud resources and field names change. `github` is cloud-agnostic and untouched.
+> **AWS components added alongside GCP — both stacks are kept.** The 0.4.0 GCP work (`network`,
+> `compute-engine`) stays as-is; new AWS analogs `vpc` and `ec2` are added next to it so an
+> environment can target either cloud. The `global` + `instances`-map interface (including the
+> multi-VM `for_each` work merged in #4) is shared verbatim across the AWS/GCP pairs; only the cloud
+> resources and field names differ. `github` is cloud-agnostic and untouched. Nothing is removed —
+> the GCP modules deleted on an earlier cut of this branch have been restored.
 
 ### Added
-- **`ec2` — AWS EC2 compute component** (`hashicorp/aws ~> 6.0`), the AWS analog of the removed
-  `compute-engine`. One or more instances via an `instances` map (`for_each`) — add a key to add an
+- **`ec2` — AWS EC2 compute component** (`hashicorp/aws ~> 6.0`), the AWS analog of `compute-engine`.
+  One or more instances via an `instances` map (`for_each`) — add a key to add an
   instance — each with **no public IP** by default. Access is **SSM Session Manager** (the IAP/OS
   Login analog): an **egress-only** security group (no inbound SSH) plus an IAM instance profile with
   the managed `AmazonSSMManagedInstanceCore` policy. **Bootstrap-agnostic** (`user_data` per instance,
   `""` = none). AMI defaults to the latest **Amazon Linux 2023**, resolved per-region via the public
   SSM parameter. Instance `Name` tag = `<environment_name>-<key>`; outputs a single `instances` map
   keyed by instance key (`name`, `instance_id`, `private_ip`, `ssm_command`). Consumes `vpc_id` +
-  `subnet_id` from `vpc`. **`access_members` is dropped** — Session Manager rights are an IAM
-  concern on the *caller* (`ssm:StartSession`), not on the module.
-
-### Changed
-- **`network` renamed `vpc` and rewritten GCP → AWS.** The directory `network/` is now `vpc/` (the
-  AWS-idiomatic name). The GCP custom-mode VPC (CFT modules, Cloud NAT, IAP-SSH
-  firewall, `ssh_tag`) is replaced by a thin wrapper over `terraform-aws-modules/vpc/aws` (`~> 6.0`):
-  a VPC + **per-AZ** private/public subnets (`az_count`, default `2`; each a `/20` via `cidrsubnet`)
-  + a single **NAT gateway** (`enable_nat_gateway`, default `true`) for private-instance egress.
-  Inputs become `cidr_block` / `az_count` / `enable_nat_gateway`; outputs become `vpc_id`,
-  `private_subnet_ids`, `public_subnet_ids`, `region`. **Env wiring changes:** `network_self_link` →
-  `vpc_id`, `subnetwork_self_link` → `private_subnet_ids[0]`.
-
-### Removed
-- **`compute-engine` (GCP) — deleted**, replaced by `ec2` above. Its multi-VM `instances`-map
-  interface (added in #4, never tagged) lives on in `ec2`; the GCP-specific access model (OS Login +
-  IAP, `access_members`) does not. Recoverable from git history.
+  `subnet_id` from `vpc`. Unlike `compute-engine`, there is **no `access_members`** — Session Manager
+  rights are an IAM concern on the *caller* (`ssm:StartSession`), not on the module.
+- **`vpc` — AWS network foundation** (`hashicorp/aws ~> 6.0`), the AWS analog of `network`. A thin
+  wrapper over `terraform-aws-modules/vpc/aws` (`~> 6.0`): a VPC + **per-AZ** private/public subnets
+  (`az_count`, default `2`; each a `/20` via `cidrsubnet`) + a single **NAT gateway**
+  (`enable_nat_gateway`, default `true`) for private-instance egress. Inputs `cidr_block` /
+  `az_count` / `enable_nat_gateway`; outputs `vpc_id`, `private_subnet_ids`, `public_subnet_ids`,
+  `region`. The GCP analog mapping is `network_self_link` → `vpc_id`, `subnetwork_self_link` →
+  `private_subnet_ids[0]`.
 
 ## [0.4.0] - 2026-06-15
 

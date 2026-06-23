@@ -22,18 +22,20 @@ and **[CHANGELOG.md](./CHANGELOG.md)** for what changed in each tagged version.
 
 ## Components
 
-> **Cloud:** AWS (`hashicorp/aws`). The earlier GCP modules have been rewritten back to AWS — see
-> [CHANGELOG.md](./CHANGELOG.md).
+> **Clouds:** both **AWS** (`hashicorp/aws`) and **GCP** (`hashicorp/google`) modules are kept here,
+> so an environment can pick either stack. See [CHANGELOG.md](./CHANGELOG.md) for the history.
 
-| Component | Cloud  | Purpose                                          | Key outputs                                     |
-| --------- | ------ | ------------------------------------------------ | ----------------------------------------------- |
-| `vpc`     | AWS    | Network foundation — wraps `terraform-aws-modules/vpc` (VPC + per-AZ subnets + NAT) | `vpc_id`, `private_subnet_ids`, `public_subnet_ids` |
-| `ec2`     | AWS    | One or more EC2 instances (`instances` map, bootstrap-agnostic); SSM Session Manager access, no public IP | `instances` (map keyed by instance key) |
-| `github`  | GitHub | GitHub repositories as code (repo factory)       | `repository_names`, `repository_urls`           |
+| Component        | Cloud  | Purpose                                          | Key outputs                                     |
+| ---------------- | ------ | ------------------------------------------------ | ----------------------------------------------- |
+| `vpc`            | AWS    | Network foundation — wraps `terraform-aws-modules/vpc` (VPC + per-AZ subnets + NAT) | `vpc_id`, `private_subnet_ids`, `public_subnet_ids` |
+| `ec2`            | AWS    | One or more EC2 instances (`instances` map, bootstrap-agnostic); SSM Session Manager access, no public IP | `instances` (map keyed by instance key) |
+| `network`        | GCP    | Network foundation — custom-mode VPC + regional subnet + Cloud NAT + IAP-SSH firewall (wraps Google Cloud Foundation Toolkit) | `network_name`, `subnetwork_self_link`, `ssh_tag` |
+| `compute-engine` | GCP    | One or more Compute Engine VMs (`instances` map, bootstrap-agnostic); OS Login + IAP access, no external IP | `instances` (map keyed by instance key) |
+| `github`         | GitHub | GitHub repositories as code (repo factory)       | `repository_names`, `repository_urls`           |
 
-`vpc` and `ec2` form a dependency chain:
-**`vpc` → `ec2`** (instances launch into the subnets the `vpc` outputs).
-`github` is standalone (org-scoped, no network).
+The components form two parallel dependency chains, one per cloud:
+**`vpc` → `ec2`** (AWS) and **`network` → `compute-engine`** (GCP) — in each, instances launch into
+the network the foundation component outputs. `github` is standalone (org-scoped, no network).
 
 ## Anatomy of a component
 
@@ -77,6 +79,6 @@ process is in [CONVENTIONS.md](./CONVENTIONS.md#versioning--releasing).
 
 ## Notes
 
-- All values are placeholders — no real AWS account IDs, credentials, or hostnames.
+- All values are placeholders — no real AWS/GCP account IDs, credentials, or hostnames.
 - Modules are minimal but **valid and applyable** (real resource blocks), so you can grow them.
-- A real apply requires AWS credentials and a state backend, both configured in the env repos.
+- A real apply requires the relevant cloud credentials (AWS or GCP) and a state backend, both configured in the env repos.

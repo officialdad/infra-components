@@ -21,8 +21,12 @@ interface and never see the upstream module's full input surface.
   (private first, then public).
 - A **single NAT gateway** — only when `enable_nat_gateway` (default `true`). Gives the private
   (no-public-IP) instances egress, including reaching AWS Systems Manager (SSM). This is the one
-  piece that costs money at idle — set `enable_nat_gateway = false` to stop charges. *Single* NAT
-  (not one per AZ) keeps it cheap; fine for non-prod.
+  piece that costs money at idle. *Single* NAT (not one per AZ) keeps it cheap; fine for non-prod.
+  > ⚠️ **`enable_nat_gateway = false` is not a free cost lever — it removes the only access path.**
+  > Instances have no public IP and no inbound, and the SSM agent reaches the service by dialing
+  > *out* through the NAT. With NAT off there is no egress *and* no ingress: the box is unreachable.
+  > Only set `false` if you add SSM VPC interface endpoints (`ssm`, `ssmmessages`, `ec2messages`)
+  > as the alternative path, or genuinely want an air-gapped instance.
 
 The instance-facing security and access model (egress-only SG, SSM Session Manager) lives in the
 **`ec2`** component, not here.

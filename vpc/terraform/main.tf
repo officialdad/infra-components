@@ -35,7 +35,7 @@ module "vpc" {
 
   # Single NAT gateway gives no-public-IP instances egress (incl. reaching SSM).
   enable_nat_gateway = var.enable_nat_gateway
-  single_nat_gateway = var.enable_nat_gateway
+  single_nat_gateway = true # one shared NAT when NAT is on; flip to false for per-AZ HA NAT
 
   enable_dns_support   = true
   enable_dns_hostnames = true

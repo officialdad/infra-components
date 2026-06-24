@@ -17,6 +17,12 @@ variable "az_count" {
   type        = number
   description = "Number of AZs to spread private/public subnets across."
   default     = 2
+
+  validation {
+    # /16 split into /20s via cidrsubnet(_, 4, _) = 16 slots; subnets use 2*az_count.
+    condition     = var.az_count <= 8
+    error_message = "az_count must be <= 8: the /16 yields only 16 /20 subnets and each AZ consumes 2 (one private, one public)."
+  }
 }
 
 variable "enable_nat_gateway" {

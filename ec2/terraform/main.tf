@@ -65,7 +65,8 @@ module "ec2" {
   }
 
   root_block_device = {
-    size = each.value.root_disk_size_gb
+    size      = each.value.root_disk_size_gb
+    encrypted = true # don't rely on the account's default-EBS-encryption setting
   }
 
   tags = local.common_tags

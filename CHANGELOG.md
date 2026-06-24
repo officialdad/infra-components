@@ -17,25 +17,36 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 
 ## [Unreleased]
 
-### Changed
-- **`compute-engine` now manages many VMs, and no longer hard-codes environment identity.**
-  - **Multi-VM:** the single hard-coded `google_compute_instance` is replaced by an `instances`
-    map fanned out with `for_each` (mirrors `github`'s `repositories` pattern) — add a map key to
-    add a VM. VM name is `<environment_name>-<key>` (the map key is the name, env-prefixed —
-    e.g. `postiz` → `dev-postiz`). Per-VM spec (`machine_type`, `boot_image`, `boot_disk_size_gb`, `zone`,
-    `assign_public_ip`, `startup_script`, `network_tags`) moved from top-level vars into each map
-    entry, all `optional(...)` with cost-safe defaults. IAM grants fan out **member × VM** via
-    `setproduct` on stable keys (no reindex churn). Outputs collapse to a single `instances` map
-    keyed by VM key (the map key, not the full `<env>-<key>` VM name) — each value carries `name`,
-    `instance_id`, `internal_ip`, `zone`, `ssh_command`.
-  - **Env identity out of the module:** `project_id` lost its dev-project default and is now
-    **required** (a forgotten value fails loudly instead of silently provisioning into the wrong
-    project); `access_members` now defaults to `[]` (no SSH) instead of two named engineers. A
-    reusable module should know *how* to build a VM, not *where* or *who* — that belongs at the
-    call site. Cost-safe `how` defaults (`e2-micro`, `debian-12`, 20 GB) are unchanged.
-  - ⚠️ **Breaking:** existing state re-keys `google_compute_instance.this` → `this["<key>"]` (IAM
-    members too) — consumers must `terragrunt state mv` or recreate. Consumers must now set
-    `project_id` explicitly and list `access_members` (the empty default grants no access).
+> **AWS components added alongside GCP — both stacks are kept.** The 0.4.0 GCP work (`network`,
+> `compute-engine`) stays as-is; new AWS analogs `vpc` and `ec2` are added next to it so an
+> environment can target either cloud. The `global` + `instances`-map interface (including the
+> multi-VM `for_each` work merged in #4) is shared verbatim across the AWS/GCP pairs; only the cloud
+> resources and field names differ. `github` is cloud-agnostic and untouched. Nothing is removed —
+> the GCP modules deleted on an earlier cut of this branch have been restored.
+
+### Added
+- **`ec2` — AWS EC2 compute component** (`hashicorp/aws >= 6.37`), the AWS analog of `compute-engine`.
+  A thin wrapper over two verified modules: [`terraform-aws-modules/ec2-instance/aws`](https://registry.terraform.io/modules/terraform-aws-modules/ec2-instance/aws)
+  (`~> 6.0`) builds the instance + its IAM role/instance profile (`create_iam_instance_profile` with
+  the managed `AmazonSSMManagedInstanceCore` policy) and enforces **IMDSv2**; [`terraform-aws-modules/security-group/aws`](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws)
+  (`~> 5.0`) builds a **per-instance** SG. One or more instances via an `instances` map (`for_each`) —
+  add a key to add an instance — each with **no public IP** by default. Access is **SSM Session
+  Manager** (the IAP/OS Login analog); the SG is **egress-only by default** (SSM dials out via the
+  `vpc`'s NAT). Each entry takes a per-instance **`ingress_rules`** list of *named* rules (e.g.
+  `["prometheus-http-tcp"]` → 9090) opened **from the VPC CIDR only** (east-west; public exposure is
+  the consuming env's job, e.g. a Cloudflare Tunnel in `user_data`). **Bootstrap-agnostic**
+  (`user_data` per instance, `""` = none). AMI defaults to the latest **Amazon Linux 2023** via the
+  module's `ami_ssm_parameter`. Instance `Name` tag = `<environment_name>-<key>`; outputs a single
+  `instances` map keyed by instance key (`name`, `instance_id`, `private_ip`, `ssm_command`).
+  Consumes `vpc_id` + `subnet_id` from `vpc`. Unlike `compute-engine`, there is **no `access_members`**
+  — Session Manager rights are an IAM concern on the *caller* (`ssm:StartSession`), not on the module.
+- **`vpc` — AWS network foundation** (`hashicorp/aws ~> 6.0`), the AWS analog of `network`. A thin
+  wrapper over `terraform-aws-modules/vpc/aws` (`~> 6.0`): a VPC + **per-AZ** private/public subnets
+  (`az_count`, default `2`; each a `/20` via `cidrsubnet`) + a single **NAT gateway**
+  (`enable_nat_gateway`, default `true`) for private-instance egress. Inputs `cidr_block` /
+  `az_count` / `enable_nat_gateway`; outputs `vpc_id`, `private_subnet_ids`, `public_subnet_ids`,
+  `region`. The GCP analog mapping is `network_self_link` → `vpc_id`, `subnetwork_self_link` →
+  `private_subnet_ids[0]`.
 
 ## [0.4.0] - 2026-06-15
 

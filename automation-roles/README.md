@@ -33,27 +33,32 @@ trust policy, and a least-privilege permissions policy.
 applier needs IAM-admin-ish credentials out-of-band — none are stored here. Region comes from
 `var.global.deploy_region` (IAM is global; region only sets the provider endpoint).
 
+## Dependencies
+
+- **Upstream:** none — bootstraps the AWS CI identity from raw IAM (no module, no component inputs).
+- **Consumed by `infra-environments-dev`:** `role_arn` → the `AWS_ROLE_ARN` secret, used by
+  `aws-actions/configure-aws-credentials@v6` (with `permissions: id-token: write`) so the pipeline
+  assumes this role for `vpc` / `ec2` plan + apply.
+
+<!-- BEGIN_TF_DOCS -->
 ## Inputs
 
-| Name                         | Type         | Default                  | Description                                                                                  |
-| ---------------------------- | ------------ | ------------------------ | -------------------------------------------------------------------------------------------- |
-| `global`                     | object       | —                        | Env-wide context (`environment_name`, `deploy_region`, `tags`).                              |
-| `github_org`                 | string       | `officialdad`            | Org/user owning the CI repo.                                                                  |
-| `github_repo`                | string       | `infra-environments-dev` | Repo whose workflows assume the role.                                                         |
-| `allowed_subjects`           | list(string) | `[]`                     | OIDC `sub` claims allowed (`StringLike`). Empty = `main` (apply) + `pull_request` (plan).     |
-| `role_name`                  | string       | `""`                     | Role name. Empty = `"<environment_name>-github-actions-ci"`.                                  |
-| `create_oidc_provider`       | bool         | `true`                   | Create the account-global GitHub OIDC provider. False = reference an existing one.            |
-| `existing_oidc_provider_arn` | string       | `""`                     | Existing provider ARN. Required when `create_oidc_provider = false`.                          |
-| `additional_policy_arns`     | list(string) | `[]`                     | Extra managed policy ARNs to attach on top of the built-in least-privilege policy.           |
+| Name | Description | Type | Default | Required |
+| ---- | ----------- | ---- | ------- | :------: |
+| global | Environment-wide context injected by the environments repo (name, region, tags). | <pre>object({<br/>    environment_name = string<br/>    deploy_region    = string<br/>    tags             = map(string)<br/>  })</pre> | n/a | yes |
+| additional\_policy\_arns | Extra managed policy ARNs to attach to the role, on top of the built-in least-privilege policy. Keep this empty unless a unit genuinely needs more than vpc+ec2 require. | `list(string)` | `[]` | no |
+| allowed\_subjects | OIDC `sub` claims allowed to assume the role (StringLike). Empty = the recommended ref/event-scoped default: the repo's main branch (apply) + pull\_request events (plan). Override to tighten or loosen, e.g. ["repo:org/repo:*"] for any ref. Never use a bare org/* wildcard. | `list(string)` | `[]` | no |
+| create\_oidc\_provider | Create the account-global GitHub OIDC provider. Set false if the account already federates GitHub (token.actions.githubusercontent.com) and pass existing\_oidc\_provider\_arn instead. | `bool` | `true` | no |
+| existing\_oidc\_provider\_arn | ARN of a pre-existing GitHub OIDC provider. Used (and required) only when create\_oidc\_provider = false. | `string` | `""` | no |
+| github\_org | GitHub org/user that owns the CI repo allowed to assume the role. | `string` | `"officialdad"` | no |
+| github\_repo | GitHub repo (within github\_org) whose Actions workflows assume the role. | `string` | `"infra-environments-dev"` | no |
+| role\_name | Name of the IAM role CI assumes. Empty = "<environment\_name>-github-actions-ci". | `string` | `""` | no |
 
 ## Outputs
 
-| Name                | Description                                                                                     |
-| ------------------- | ----------------------------------------------------------------------------------------------- |
-| `role_arn`          | ARN of the CI role. Consumed by the env unit → repo secret `AWS_ROLE_ARN`.                      |
-| `oidc_provider_arn` | ARN of the GitHub OIDC provider (created here, or the existing one passed in).                  |
-| `role_name`         | Name of the CI role.                                                                            |
-
-Consumed by the **infra-environments-dev** repo: `role_arn` → `AWS_ROLE_ARN` secret, used by
-`aws-actions/configure-aws-credentials@v6` (with `permissions: id-token: write`) so the pipeline
-assumes this role for `vpc`/`ec2` plan + apply.
+| Name | Description |
+| ---- | ----------- |
+| oidc\_provider\_arn | ARN of the GitHub OIDC provider (created here, or the existing one passed in). |
+| role\_arn | ARN of the CI role. Consumed by the env unit → repo secret AWS\_ROLE\_ARN (used by aws-actions/configure-aws-credentials). |
+| role\_name | Name of the CI role. |
+<!-- END_TF_DOCS -->

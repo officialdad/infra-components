@@ -1,0 +1,25 @@
+# Generates the Inputs/Outputs tables in each component's README from its terraform/ module,
+# injected between the <!-- BEGIN_TF_DOCS --> / <!-- END_TF_DOCS --> markers. Driven by
+# scripts/gen-docs.sh (pre-commit + CI + the PostToolUse Claude hook). Required inputs sort first,
+# matching the "required = identity/placement only" convention. DO NOT hand-edit the injected block.
+formatter: "markdown table"
+
+sections:
+  show:
+    - inputs
+    - outputs
+
+sort:
+  enabled: true
+  by: required
+
+settings:
+  anchor: false
+
+output:
+  file: ../README.md # relative to the module dir (<component>/terraform) → writes <component>/README.md
+  mode: inject
+  template: |-
+    <!-- BEGIN_TF_DOCS -->
+    {{ .Content }}
+    <!-- END_TF_DOCS -->

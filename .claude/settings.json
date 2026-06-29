@@ -23,6 +23,12 @@
             "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/tf-postwrite.sh\"",
             "timeout": 30,
             "statusMessage": "Formatting Terraform + grounding via terraform MCP…"
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/tf-docs.sh\"",
+            "timeout": 30,
+            "statusMessage": "Regenerating component README tables (terraform-docs)…"
           }
         ]
       }

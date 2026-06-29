@@ -43,3 +43,31 @@ jobs:
           cd ${{ matrix.component }}/terraform
           tflint --init --config="$GITHUB_WORKSPACE/.tflint.hcl"
           tflint --config="$GITHUB_WORKSPACE/.tflint.hcl"
+
+  # Docs: component README Inputs/Outputs tables are up to date (terraform-docs), the required README
+  # structure is present, and markdown style holds. Mirrors the local pre-commit docs hooks.
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: install terraform-docs
+        run: |
+          curl -sSfL -o td.tgz \
+            https://github.com/terraform-docs/terraform-docs/releases/download/v0.24.0/terraform-docs-v0.24.0-linux-amd64.tar.gz
+          tar -xzf td.tgz terraform-docs
+          sudo install -m 0755 terraform-docs /usr/local/bin/terraform-docs
+          terraform-docs version
+
+      - name: README tables up to date (terraform-docs)
+        run: bash scripts/gen-docs.sh --check
+
+      - name: README structure
+        run: bash scripts/check-readme-structure.sh
+
+      - uses: DavidAnson/markdownlint-cli2-action@v23.2.0
+        with:
+          globs: |
+            README.md
+            CLAUDE.md
+            */README.md

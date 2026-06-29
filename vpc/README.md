@@ -36,23 +36,29 @@ The instance-facing security and access model (egress-only SG, SSM Session Manag
 The provider needs AWS credentials (env vars, shared config, or an instance/CI role) — supplied
 out-of-band, none stored in this component. Region comes from `var.global.deploy_region`.
 
+## Dependencies
+
+- **Upstream:** none — `vpc` is a network foundation.
+- **Consumed by `ec2`:** `vpc_id` → `vpc_id`, `vpc_cidr_block` → `vpc_cidr`,
+  `private_subnet_ids[0]` → `subnet_id`.
+
+<!-- BEGIN_TF_DOCS -->
 ## Inputs
 
-| Name                 | Type   | Default       | Description                                                                 |
-| -------------------- | ------ | ------------- | --------------------------------------------------------------------------- |
-| `global`             | object | —             | Env-wide context (`environment_name`, `deploy_region`, `tags`).             |
-| `cidr_block`         | string | `10.0.0.0/16` | Primary IPv4 CIDR of the VPC.                                               |
-| `az_count`           | number | `2`           | Number of AZs to spread private/public subnets across.                      |
-| `enable_nat_gateway` | bool   | `true`        | Create a single NAT gateway so private instances get egress (incl. SSM).    |
+| Name | Description | Type | Default | Required |
+| ---- | ----------- | ---- | ------- | :------: |
+| global | Environment-wide context injected by the environments repo (name, region, tags). | <pre>object({<br/>    environment_name = string<br/>    deploy_region    = string<br/>    tags             = map(string)<br/>  })</pre> | n/a | yes |
+| az\_count | Number of AZs to spread private/public subnets across. | `number` | `2` | no |
+| cidr\_block | Primary IPv4 CIDR of the VPC. | `string` | `"10.0.0.0/16"` | no |
+| enable\_nat\_gateway | Create a single NAT gateway so private (no-public-IP) instances get egress, including reaching AWS Systems Manager (SSM). | `bool` | `true` | no |
 
 ## Outputs
 
-| Name                 | Description                                                       |
-| -------------------- | ---------------------------------------------------------------- |
-| `vpc_id`             | The VPC id (pass to `ec2.vpc_id`).                               |
-| `vpc_cidr_block`     | The VPC CIDR (pass to `ec2.vpc_cidr` for SG ingress).            |
-| `private_subnet_ids` | Private subnet ids (pass `ec2.subnet_id = private_subnet_ids[0]`). |
-| `public_subnet_ids`  | Public subnet ids.                                               |
-| `region`             | The region the VPC lives in.                                    |
-
-Consumed by `ec2` (`vpc_id` → `vpc_id`, `vpc_cidr_block` → `vpc_cidr`, `private_subnet_ids[0]` → `subnet_id`).
+| Name | Description |
+| ---- | ----------- |
+| private\_subnet\_ids | Private subnet ids (pass ec2.subnet\_id = private\_subnet\_ids[0]). |
+| public\_subnet\_ids | Public subnet ids. |
+| region | Region the VPC lives in. |
+| vpc\_cidr\_block | The VPC CIDR (pass to ec2.vpc\_cidr for SG ingress). |
+| vpc\_id | The VPC id (pass to ec2.vpc\_id). |
+<!-- END_TF_DOCS -->

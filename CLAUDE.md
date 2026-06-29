@@ -34,7 +34,7 @@ Dual-stack on purpose — an environment picks a cloud. Two parallel foundation�
 
 ## Module anatomy (every component)
 
-```
+```text
 <component>/
 ├── README.md          # inputs/outputs tables, auth, dependencies
 └── terraform/
@@ -98,13 +98,36 @@ internal submodule, and that indirection isn't worth saving a few lines. **When 
 these blocks, mirror the change across every component identically** — they are a de-facto shared
 interface even though the tooling can't enforce it.
 
+## Component README style
+
+Each `<component>/README.md` is scaffolded from `.github/component-readme-template.md` and follows one
+house voice (exemplars: **`vpc`**, **`ec2`**). The point is a *deterministic shape*, not freehand
+prose — **structure** and **format** are enforced in CI; **voice** is a contract you follow:
+
+- **Title + one lead sentence** — what it is, which cloud, the single defining opinion. Stop there.
+- **`## What it creates`** — a bullet list. Bold the resource/noun, then a concise clause; defaults in
+  `backticks`. Sharp edges go in a `> ⚠️` blockquote, never inline prose.
+- **Active voice, one idea per bullet** — lead with the thing, cut filler ("This component is…"). If a
+  sentence can be a bullet, make it one.
+- **`## Auth`** — 1–3 lines: which credentials, supplied out-of-band, where region/project comes from.
+- **`## Dependencies`** (required) — bullets mapping upstream outputs → this component's inputs;
+  `None.` for a foundation.
+- **`## Inputs` / `## Outputs`** — **generated** by terraform-docs between the `<!-- BEGIN_TF_DOCS -->`
+  / `<!-- END_TF_DOCS -->` markers; **never hand-edit**. For a `map`/`object` input (`instances`,
+  `repositories`), add a short prose **"entry shape"** explainer above the block — the generated table
+  is the authoritative reference, the prose explains the per-field intent the collapsed type can't.
+
+Mechanics (enforced): `scripts/gen-docs.sh` regenerates the tables (pre-commit + CI `--check`);
+`scripts/check-readme-structure.sh` asserts the required sections + markers; `markdownlint` enforces
+formatting. The `/component-readme` skill writes to this spec.
+
 ## Checklist — adding or changing a component
 
 - [ ] `terraform/` with `versions.tf` / `variables.tf` / `main.tf` / `outputs.tf`
 - [ ] `global` as first variable (or a documented exception)
 - [ ] `common_tags` (AWS) or sanitized labels (GCP) on every taggable resource
 - [ ] `required_version = ">= 1.5.7"`; bounded `~>` provider pins
-- [ ] `README.md`: inputs table, outputs table, auth, dependencies
+- [ ] `README.md` from `.github/component-readme-template.md`: lead sentence, **What it creates**, **Auth**, **Dependencies**, and the `<!-- BEGIN/END_TF_DOCS -->` markers — Inputs/Outputs are **generated** (`scripts/gen-docs.sh`), never hand-written. Follow [Component README style](#component-readme-style)
 - [ ] Add the component to **`.github/workflows/ci.yml`** matrix
 - [ ] Add a row to the **root README** components table
 - [ ] Add a **CHANGELOG `[Unreleased]`** entry (Added / Changed / Fixed; flag breaking loudly)
@@ -116,6 +139,9 @@ This repo ships a deterministic quality layer in `.claude/settings.json` + `.cla
 the *harness* runs these regardless of the model, so quality and truth are enforced, not hoped for:
 
 - **Auto-format** — every `*.tf` edit is `terraform fmt`'d immediately (`tf-postwrite.sh`).
+- **Auto-docs** — after a `*.tf` edit, `tf-docs.sh` regenerates that component's README Inputs/Outputs
+  tables (terraform-docs). pre-commit + CI then enforce the tables, README structure, and markdown
+  style (`scripts/gen-docs.sh --check`, `check-readme-structure.sh`, `markdownlint`) — docs can't drift.
 - **Blocking finish gate** — on Stop/SubagentStop, `tf-gate.sh` runs `fmt -check` + `validate` +
   `tflint` on components with *uncommitted* Terraform changes and **blocks the turn from ending
   while anything is red**. `validate` is a schema oracle: you cannot finish with a hallucinated

@@ -60,9 +60,10 @@ module "ec2" {
   vpc_security_group_ids = [module.sg[each.key].security_group_id]
 
   create_iam_instance_profile = true
-  iam_role_policies = {
-    ssm = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-  }
+  iam_role_policies = merge(
+    { ssm = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore" },
+    each.value.iam_role_policy_arns,
+  )
 
   root_block_device = {
     size      = each.value.root_disk_size_gb

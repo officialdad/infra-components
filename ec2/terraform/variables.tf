@@ -19,15 +19,16 @@ variable "subnet_id" {
 
 variable "instances" {
   type = map(object({
-    instance_type     = optional(string, "t3.micro")
-    ami               = optional(string, "")
-    ami_ssm_parameter = optional(string, "")
-    root_disk_size_gb = optional(number, 20)
-    assign_public_ip  = optional(bool, false)
-    user_data         = optional(string, "")
-    ingress_rules     = optional(list(string), [])
+    instance_type        = optional(string, "t3.micro")
+    ami                  = optional(string, "")
+    ami_ssm_parameter    = optional(string, "")
+    root_disk_size_gb    = optional(number, 20)
+    assign_public_ip     = optional(bool, false)
+    user_data            = optional(string, "")
+    ingress_rules        = optional(list(string), [])
+    iam_role_policy_arns = optional(map(string), {})
   }))
-  description = "EC2 instances to create, keyed by short name. Each entry overrides only the fields it needs; the rest take module defaults. Instance Name tag = \"<env>-<key>\". OS selection: set ami to a literal AMI id (wins if set), OR set ami_ssm_parameter to a public SSM parameter to track the latest image (e.g. Ubuntu: \"/aws/service/canonical/ubuntu/server/26.04/stable/current/amd64/hvm/ebs-gp3/ami-id\"); both empty = latest Amazon Linux 2023. ingress_rules are named rules from terraform-aws-modules/security-group (e.g. [\"prometheus-http-tcp\"]); empty = SSM-only, no inbound. Each instance gets its own SG, reachable from the VPC CIDR only."
+  description = "EC2 instances keyed by short name; each entry overrides only what it needs. Name tag = \"<env>-<key>\". OS: literal ami wins, else ami_ssm_parameter tracks latest image (default Amazon Linux 2023). ingress_rules = named SG rules (empty = SSM-only, no inbound). iam_role_policy_arns = extra policy ARNs (static keys) on the instance role, atop the always-on SSM core policy."
   default     = {}
 
   validation {

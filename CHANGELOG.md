@@ -23,6 +23,12 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 
 ## [Unreleased]
 
+### Added
+- **iam-policy:** generic AWS IAM policy factory — env-authored JSON documents become named/tagged `aws_iam_policy`; outputs `policy_arns` (feeds `ec2` `iam_role_policy_arns`)
+
+### Changed
+- **automation-roles:** CI role may manage `iam:*Policy` scoped to `policy/<env>-*` so the pipeline can apply `iam-policy`
+
 ### Fixed
 - **release.sh:** annotate the `vX.Y.Z` tag (`git tag -m`) so tagging no longer aborts under `tag.gpgsign`/`forceSignAnnotated` — the release commit and tag are always created together
 

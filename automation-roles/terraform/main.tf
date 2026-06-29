@@ -132,6 +132,25 @@ data "aws_iam_policy_document" "permissions" {
     ]
     resources = ["arn:aws:ssm:*::parameter/aws/service/*"]
   }
+
+  # Managed policies: the iam-policy component creates standalone aws_iam_policy resources the env
+  # attaches to instance roles. Scoped to this account's <env>-* policies (same prefix as roles).
+  statement {
+    sid    = "ManagedPolicies"
+    effect = "Allow"
+    actions = [
+      "iam:CreatePolicy",
+      "iam:DeletePolicy",
+      "iam:GetPolicy",
+      "iam:GetPolicyVersion",
+      "iam:CreatePolicyVersion",
+      "iam:DeletePolicyVersion",
+      "iam:ListPolicyVersions",
+      "iam:TagPolicy",
+      "iam:UntagPolicy",
+    ]
+    resources = ["arn:aws:iam::${local.account_id}:policy/${var.global.environment_name}-*"]
+  }
 }
 
 # Standalone managed policy (auditable, reusable) rather than an inline role policy.

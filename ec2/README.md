@@ -24,8 +24,9 @@ For each entry in `instances` (keyed by a short name — that key also keys the 
   latest Ubuntu); **IMDSv2 is enforced** (`http_tokens = "required"`). Runs that entry's `user_data` on first boot
   (empty = no bootstrap). The module also builds the instance's **IAM role + instance profile**
   (`create_iam_instance_profile`) with the AWS-managed **`AmazonSSMManagedInstanceCore`** policy —
-  what registers the instance for Session Manager. **Bootstrap-agnostic** — the first-boot script is
-  **userdata owned by the consuming environment**, not baked in. See "Bootstrap / userdata" below.
+  what registers the instance for Session Manager. Attach extra scoped policies per instance via
+  `iam_role_policy_arns` (e.g. read one SSM SecureString param). **Bootstrap-agnostic** — the first-boot
+  script is **userdata owned by the consuming environment**, not baked in. See "Bootstrap / userdata" below.
 - **A per-instance security group** (security-group module). **Egress-only by default** (SSM dials
   out via the `vpc`'s NAT, so no inbound is needed). Set `ingress_rules` to open named service ports
   (e.g. `["prometheus-http-tcp"]` → 9090); these are reachable **from the VPC CIDR only**, never the
@@ -114,6 +115,7 @@ Per-instance fields inside each `instances` entry (all optional):
 | `assign_public_ip`  | `false`     | Attach a public IP. Leave `false` for the SSM-only model.                    |
 | `user_data`         | `""`        | First-boot script (userdata). Empty = no bootstrap. Supplied by the env.    |
 | `ingress_rules`     | `[]`        | Named SG ingress rules to open on this instance (e.g. `["prometheus-http-tcp"]`), reachable from the VPC CIDR only. Empty = SSM-only, no inbound. |
+| `iam_role_policy_arns` | `{}`     | Extra IAM policy ARNs to attach to this instance's role, keyed by a **static** name (e.g. `{ tunnel = aws_iam_policy.x.arn }`). Merged **on top of** the always-on `AmazonSSMManagedInstanceCore`, so SSM access is never lost. The component stays generic — it attaches whatever you pass; the **consumer composes the scoped policy** (e.g. read one SSM SecureString param + `kms:Decrypt`). Keys must be literals (`for_each`); ARN values may be computed. |
 
 > **No `access_members`:** Session Manager access is an IAM concern on the *caller's* side
 > (`ssm:StartSession`), so it has no place in this module. Env identity (`vpc_id`, `subnet_id`) is

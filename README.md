@@ -117,8 +117,8 @@ track a branch (`?ref=main`) while iterating; prod pins a tag.
 1. Make the module change on a branch, open a PR, merge to `main`.
 2. `infra-environments-dev` (tracks `main`) picks it up — apply and let it soak.
 3. Update [CHANGELOG.md](./CHANGELOG.md):
-   - Keep entries **lean** — one line per change (`**scope:** summary`); draft them from commits with
-     `git cliff --unreleased` ([`cliff.toml`](./cliff.toml)), then curate by hand.
+   - Keep entries **lean** — one line per change (`**scope:** summary`). CI drafts them from commits
+     and comments the draft on your PR ([`cliff.toml`](./cliff.toml)); curate it in.
    - Move `[Unreleased]` content into a new `## [X.Y.Z] - YYYY-MM-DD` section.
    - Add a compare link at the bottom for the new version.
    - Update the `[Unreleased]` link to `compare/vX.Y.Z...HEAD`.
@@ -129,12 +129,14 @@ track a branch (`?ref=main`) while iterating; prod pins a tag.
 4. Commit the CHANGELOG update, tag, and push both in one command:
    ```bash
    git add CHANGELOG.md
-   git commit -m "vX.Y.Z <short description>"
+   git commit -m "chore(release): vX.Y.Z"
    git tag vX.Y.Z
    git push origin main vX.Y.Z
    ```
    `git push origin main vX.Y.Z` pushes the branch and tag atomically — avoids
    the tag landing on a different commit if something races, and keeps the push log clean.
+   Pushing the tag triggers [`changelog.yml`](./.github/workflows/changelog.yml), which generates
+   the **GitHub Release** notes from the tagged commits — no hand-written release notes.
 5. Promote to prod: PR in `infra-environments-prod` bumping the component's `versions.hcl`
    (`"vOLD"` → `"vX.Y.Z"`), reviewed, then apply.
 

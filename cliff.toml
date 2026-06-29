@@ -1,13 +1,9 @@
-# git-cliff — drafts the CHANGELOG [Unreleased] section from Conventional Commits.
+# git-cliff config — drafts the CHANGELOG from Conventional Commits.
+# Consumed by .github/workflows/changelog.yml:
+#   - PRs: the draft entries are posted as a comment to curate into CHANGELOG.md.
+#   - Tag push (vX.Y.Z): the GitHub Release notes are generated from this config.
 # We DRAFT, then curate by hand and cut the tag manually (the soak gate stays — see README
-# "Versioning & releasing"). git-cliff does NOT own CHANGELOG.md's narrative/intro.
-#
-#   Draft unreleased entries:        git cliff --unreleased
-#   Draft as a named version:        git cliff --unreleased --tag vX.Y.Z
-#   (PR links appear when run with a GitHub token: GITHUB_TOKEN=… git cliff --unreleased)
-#
-# Then paste the grouped bullets under ## [Unreleased] in CHANGELOG.md, trim, and add any
-# narrative blockquote by hand.
+# "Versioning & releasing"). git-cliff never owns CHANGELOG.md's narrative and never auto-tags.
 
 [changelog]
 header = ""

@@ -1,0 +1,88 @@
+name: changelog
+
+# Draft the changelog from Conventional Commits with git-cliff (config: cliff.toml).
+#   - Pull requests: comment the draft entries so you curate them into CHANGELOG.md.
+#   - Tag push (vX.Y.Z): generate the GitHub Release notes for that tag.
+# Never auto-tags and never commits to main — tagging stays manual and deliberate.
+# (Fork PRs can't comment — GITHUB_TOKEN is read-only across forks; our PRs are branch PRs.)
+
+on:
+  pull_request:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  pr-preview:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # git-cliff needs full history + tags
+
+      - name: Draft unreleased changelog
+        id: cliff
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --unreleased --strip header
+          github_token: ${{ github.token }}
+
+      - name: Upsert sticky PR comment
+        uses: actions/github-script@v7
+        env:
+          DRAFT_FILE: ${{ steps.cliff.outputs.changelog }}
+        with:
+          script: |
+            const fs = require('fs');
+            const draft = fs.readFileSync(process.env.DRAFT_FILE, 'utf8').trim();
+            const marker = '<!-- changelog-preview -->';
+            const body = [
+              marker,
+              '### 📝 Changelog preview (draft)',
+              'Generated from Conventional Commits. Curate into `CHANGELOG.md` → `## [Unreleased]` — trim noise, keep consumer-facing changes.',
+              '',
+              draft || '_No changelog-relevant commits on this branch yet._',
+            ].join('\n');
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const { data: comments } = await github.rest.issues.listComments({ owner, repo, issue_number });
+            const existing = comments.find((c) => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the GitHub Release
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Generate release notes
+        id: cliff
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --latest --strip header
+          github_token: ${{ github.token }}
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --notes-file "${{ steps.cliff.outputs.changelog }}"

@@ -6,10 +6,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/), and this repo us
 [Semantic Versioning](https://semver.org/) via git tags (`vMAJOR.MINOR.PATCH`).
 
 **Style — keep it lean:** one line per change, `**scope:** imperative summary`. The *why* and *how*
-live in the PR and commit, not here. Draft the `[Unreleased]` section from Conventional Commits with
-`git cliff --unreleased` (config: [`cliff.toml`](./cliff.toml)), then curate by hand — trim noise,
-keep only consumer-facing changes, add a short narrative blockquote only for a big shift. Tagging
-stays manual (see [README](./README.md#versioning--releasing)).
+live in the PR and commit, not here. CI drafts the `[Unreleased]` entries from Conventional Commits
+and posts them as a comment on your PR (config: [`cliff.toml`](./cliff.toml)); curate them in — trim
+noise, keep only consumer-facing changes, add a short narrative blockquote only for a big shift.
+Tagging stays manual (see [README](./README.md#versioning--releasing)).
 
 **How this connects to the environments repos:** `infra-environments-dev` tracks `main`, so the
 `[Unreleased]` changes below are what dev runs. When a change has soaked in dev, cut a tag (see

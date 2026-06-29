@@ -9,11 +9,6 @@ locals {
   })
 }
 
-# VPC CIDR, so named ingress rules are reachable from inside the network only.
-data "aws_vpc" "this" {
-  id = var.vpc_id
-}
-
 # Per-instance SG via the verified module: named ingress rules (e.g.
 # "prometheus-http-tcp" -> 9090) from the VPC CIDR; egress open so SSM reaches
 # the instance via NAT. Empty ingress_rules = egress-only (SSM-only, no inbound).
@@ -28,7 +23,7 @@ module "sg" {
   vpc_id      = var.vpc_id
 
   ingress_rules       = each.value.ingress_rules
-  ingress_cidr_blocks = [data.aws_vpc.this.cidr_block]
+  ingress_cidr_blocks = [var.vpc_cidr]
   egress_rules        = ["all-all"]
 
   tags = local.common_tags

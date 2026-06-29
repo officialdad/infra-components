@@ -12,6 +12,11 @@ variable "vpc_id" {
   description = "VPC the instances and their security group live in (from vpc.vpc_id)."
 }
 
+variable "vpc_cidr" {
+  type        = string
+  description = "VPC CIDR for SG ingress rules (from vpc.vpc_cidr_block). Replaces a live aws_vpc lookup so ec2 plans greenfield."
+}
+
 variable "subnet_id" {
   type        = string
   description = "Subnet all instances launch into (from vpc.private_subnet_ids[0]). Use a private subnet for no-public-IP, SSM-only access."

@@ -1,0 +1,61 @@
+# git-cliff — drafts the CHANGELOG [Unreleased] section from Conventional Commits.
+# We DRAFT, then curate by hand and cut the tag manually (the soak gate stays — see README
+# "Versioning & releasing"). git-cliff does NOT own CHANGELOG.md's narrative/intro.
+#
+#   Draft unreleased entries:        git cliff --unreleased
+#   Draft as a named version:        git cliff --unreleased --tag vX.Y.Z
+#   (PR links appear when run with a GitHub token: GITHUB_TOKEN=… git cliff --unreleased)
+#
+# Then paste the grouped bullets under ## [Unreleased] in CHANGELOG.md, trim, and add any
+# narrative blockquote by hand.
+
+[changelog]
+header = ""
+# Lean Keep a Changelog body: one line per change, grouped, scope-prefixed.
+body = """
+{% if version %}\
+## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}\
+## [Unreleased]
+{% endif %}\
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim | upper_first }}
+{% for commit in commits %}\
+- {% if commit.scope %}**{{ commit.scope }}:** {% endif %}\
+{% if commit.breaking %}**[breaking]** {% endif %}\
+{{ commit.message | upper_first }}\
+{% if commit.remote.pr_number %} (#{{ commit.remote.pr_number }}){% endif %}
+{% endfor %}\
+{% endfor %}
+"""
+footer = ""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true   # drop non-conventional commits (merges, etc.) from the changelog
+split_commits = false
+protect_breaking_commits = true
+filter_commits = false
+tag_pattern = "v[0-9]*"
+sort_commits = "newest"
+# Map conventional types -> Keep a Changelog sections (ordered via comment prefixes).
+# docs/chore/ci/test/style/build are internal — skipped (a breaking one is still kept).
+commit_parsers = [
+  { message = "^feat", group = "<!-- 0 -->Added" },
+  { message = "^fix", group = "<!-- 1 -->Fixed" },
+  { message = "^refactor", group = "<!-- 2 -->Changed" },
+  { message = "^perf", group = "<!-- 2 -->Changed" },
+  { message = "^revert", group = "<!-- 3 -->Removed" },
+  { message = "^docs", skip = true },
+  { message = "^chore", skip = true },
+  { message = "^ci", skip = true },
+  { message = "^test", skip = true },
+  { message = "^style", skip = true },
+  { message = "^build", skip = true },
+]
+
+# PR links in entries (optional — needs a token at runtime; harmless without one).
+[remote.github]
+owner = "officialdad"
+repo = "infra-components"

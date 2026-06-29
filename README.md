@@ -117,6 +117,8 @@ track a branch (`?ref=main`) while iterating; prod pins a tag.
 1. Make the module change on a branch, open a PR, merge to `main`.
 2. `infra-environments-dev` (tracks `main`) picks it up — apply and let it soak.
 3. Update [CHANGELOG.md](./CHANGELOG.md):
+   - Keep entries **lean** — one line per change (`**scope:** summary`); draft them from commits with
+     `git cliff --unreleased` ([`cliff.toml`](./cliff.toml)), then curate by hand.
    - Move `[Unreleased]` content into a new `## [X.Y.Z] - YYYY-MM-DD` section.
    - Add a compare link at the bottom for the new version.
    - Update the `[Unreleased]` link to `compare/vX.Y.Z...HEAD`.

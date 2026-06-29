@@ -71,7 +71,10 @@ mv "$cl.tmp" "$cl"
 git --no-pager diff -- "$cl"
 git add "$cl"
 git commit -m "chore(release): v$ver"
-git tag "v$ver"
+# Annotated (-m), not lightweight: when tag.gpgsign/forceSignAnnotated is set, git makes the tag
+# signed+annotated and a non-interactive run with no message aborts ("fatal: no tag message?"),
+# leaving the release commit tagless. A message satisfies that and auto-signs when configured.
+git tag -m "Release v$ver" "v$ver"
 
 cat <<EOF
 

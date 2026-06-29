@@ -23,6 +23,9 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 
 ## [Unreleased]
 
+### Fixed
+- **release.sh:** annotate the `vX.Y.Z` tag (`git tag -m`) so tagging no longer aborts under `tag.gpgsign`/`forceSignAnnotated` — the release commit and tag are always created together
+
 ## [0.5.0] - 2026-06-30
 
 > **AWS added alongside GCP — both stacks kept.** New AWS analogs `vpc` / `ec2` / `automation-roles`

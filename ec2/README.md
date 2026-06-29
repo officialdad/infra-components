@@ -74,6 +74,7 @@ read with `file()` and passed as that instance's `user_data` inside the `instanc
 ```hcl
 inputs = {
   vpc_id    = dependency.vpc.outputs.vpc_id
+  vpc_cidr  = dependency.vpc.outputs.vpc_cidr_block
   subnet_id = dependency.vpc.outputs.private_subnet_ids[0]
 
   instances = {
@@ -101,6 +102,7 @@ identity needs `ssm:StartSession` on the target instance.
 | ----------- | ----------- | ------- | ------------------------------------------------------------------------------------------------ |
 | `global`    | object      | —       | Env-wide context (`environment_name`, `deploy_region`, `tags`).                                  |
 | `vpc_id`    | string      | —       | VPC the instances and their security group live in (from `vpc.vpc_id`).                            |
+| `vpc_cidr`  | string      | —       | VPC CIDR for SG ingress rules (from `vpc.vpc_cidr_block`). Passed as a value so `ec2` plans greenfield — no live `aws_vpc` lookup. |
 | `subnet_id` | string      | —       | Subnet all instances launch into (from `vpc.private_subnet_ids[0]`). Use a **private** subnet for the no-public-IP, SSM-only model. |
 | `instances` | map(object) | `{}`    | Instances to create, keyed by short name. Per-instance fields below; each entry overrides only what it needs. |
 
@@ -118,7 +120,7 @@ Per-instance fields inside each `instances` entry (all optional):
 | `iam_role_policy_arns` | `{}`     | Extra IAM policy ARNs to attach to this instance's role, keyed by a **static** name (e.g. `{ tunnel = aws_iam_policy.x.arn }`). Merged **on top of** the always-on `AmazonSSMManagedInstanceCore`, so SSM access is never lost. The component stays generic — it attaches whatever you pass; the **consumer composes the scoped policy** (e.g. read one SSM SecureString param + `kms:Decrypt`). Keys must be literals (`for_each`); ARN values may be computed. |
 
 > **No `access_members`:** Session Manager access is an IAM concern on the *caller's* side
-> (`ssm:StartSession`), so it has no place in this module. Env identity (`vpc_id`, `subnet_id`) is
+> (`ssm:StartSession`), so it has no place in this module. Env identity (`vpc_id`, `vpc_cidr`, `subnet_id`) is
 > required with no default; the cost-safe *how* knobs (`t3.micro`, 20 GB) keep defaults, since a
 > forgotten value there is harmless.
 
@@ -130,5 +132,5 @@ Per-instance fields inside each `instances` entry (all optional):
 
 ## Dependencies
 
-Consumes `vpc_id` and `subnet_id` from the `vpc` component. Relies on the `vpc`'s NAT gateway
+Consumes `vpc_id`, `vpc_cidr_block`, and `subnet_id` from the `vpc` component. Relies on the `vpc`'s NAT gateway
 for outbound (so the SSM agent can dial out and any bootstrap can fetch packages).

@@ -50,8 +50,9 @@ out-of-band, none stored in this component. Region comes from `var.global.deploy
 | Name                 | Description                                                       |
 | -------------------- | ---------------------------------------------------------------- |
 | `vpc_id`             | The VPC id (pass to `ec2.vpc_id`).                               |
+| `vpc_cidr_block`     | The VPC CIDR (pass to `ec2.vpc_cidr` for SG ingress).            |
 | `private_subnet_ids` | Private subnet ids (pass `ec2.subnet_id = private_subnet_ids[0]`). |
 | `public_subnet_ids`  | Public subnet ids.                                               |
 | `region`             | The region the VPC lives in.                                    |
 
-Consumed by `ec2` (`vpc_id` → `vpc_id`, `private_subnet_ids[0]` → `subnet_id`).
+Consumed by `ec2` (`vpc_id` → `vpc_id`, `vpc_cidr_block` → `vpc_cidr`, `private_subnet_ids[0]` → `subnet_id`).

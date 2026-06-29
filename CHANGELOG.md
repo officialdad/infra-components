@@ -25,6 +25,13 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 > the GCP modules deleted on an earlier cut of this branch have been restored.
 
 ### Added
+- **`automation-roles` — AWS CI identity (GitHub-OIDC → IAM role)** (`hashicorp/aws ~> 6.0`), the AWS
+  analog of the GCP WIF work. Lets the `infra-environments-dev` pipeline assume a short-lived AWS role
+  via GitHub Actions OIDC — **no static `AWS_*` keys**. Creates the OIDC provider (toggleable, since
+  it's an account-global singleton) + a role whose trust is **ref/event-scoped by default** (`main`
+  apply, `pull_request` plan) with a **least-privilege** policy for exactly what `vpc`+`ec2` need.
+  Outputs `role_arn` (→ env repo `AWS_ROLE_ARN` secret) + `oidc_provider_arn`. **Human-applied,
+  excluded from the pipeline it bootstraps.**
 - **`ec2` — AWS EC2 compute component** (`hashicorp/aws >= 6.37`), the AWS analog of `compute-engine`.
   A thin wrapper over two verified modules: [`terraform-aws-modules/ec2-instance/aws`](https://registry.terraform.io/modules/terraform-aws-modules/ec2-instance/aws)
   (`~> 6.0`) builds the instance + its IAM role/instance profile (`create_iam_instance_profile` with

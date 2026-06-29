@@ -32,10 +32,12 @@ and **[CHANGELOG.md](./CHANGELOG.md)** for what changed in each tagged version.
 | `network`        | GCP    | Network foundation — custom-mode VPC + regional subnet + Cloud NAT + IAP-SSH firewall (wraps Google Cloud Foundation Toolkit) | `network_name`, `subnetwork_self_link`, `ssh_tag` |
 | `compute-engine` | GCP    | One or more Compute Engine VMs (`instances` map, bootstrap-agnostic); OS Login + IAP access, no external IP | `instances` (map keyed by instance key) |
 | `github`         | GitHub | GitHub repositories as code (repo factory)       | `repository_names`, `repository_urls`           |
+| `automation-roles` | AWS  | CI identity — GitHub Actions OIDC provider + the least-privilege IAM role the pipeline assumes (no static keys) | `role_arn`, `oidc_provider_arn` |
 
 The components form two parallel dependency chains, one per cloud:
 **`vpc` → `ec2`** (AWS) and **`network` → `compute-engine`** (GCP) — in each, instances launch into
-the network the foundation component outputs. `github` is standalone (org-scoped, no network).
+the network the foundation component outputs. `github` and `automation-roles` are standalone
+(no network); `automation-roles` is a human-applied CI bootstrap, kept out of its own pipeline.
 
 ## Anatomy of a component
 

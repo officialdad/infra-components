@@ -124,6 +124,10 @@ the *harness* runs these regardless of the model, so quality and truth are enfor
   environments repos) and any `git --no-verify` / `commit -n` (which would skip the pre-commit
   fmt + secret-detection gate). Don't try to route around these.
 - **Session truth banner** — `session-truth.sh` prints real toolchain/branch state at start.
+- **PR/issue format** — `gh-format-guard.sh` denies `gh pr/issue create` whose body doesn't follow
+  the repo templates. When opening a PR, fill **`.github/pull_request_template.md`** (pass it via
+  `--body-file`, or include its `## Summary … ## Validation` sections) — don't `--fill` or free-form.
+  For issues, use `--template module-bug.md` or `module-change.md`.
 
 **Grounding Terraform facts:** a project MCP server `terraform`
 (`hashicorp/terraform-mcp-server`, see `.mcp.json`) is the **authoritative source** for provider /

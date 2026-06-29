@@ -3,6 +3,11 @@ output "vpc_id" {
   description = "The VPC id (pass to ec2.vpc_id)."
 }
 
+output "vpc_cidr_block" {
+  value       = module.vpc.vpc_cidr_block
+  description = "The VPC CIDR (pass to ec2.vpc_cidr for SG ingress)."
+}
+
 output "private_subnet_ids" {
   value       = module.vpc.private_subnets
   description = "Private subnet ids (pass ec2.subnet_id = private_subnet_ids[0])."

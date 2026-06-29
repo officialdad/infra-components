@@ -45,7 +45,9 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
   (`user_data` per instance, `""` = none). AMI defaults to the latest **Amazon Linux 2023** via the
   module's `ami_ssm_parameter`. Instance `Name` tag = `<environment_name>-<key>`; outputs a single
   `instances` map keyed by instance key (`name`, `instance_id`, `private_ip`, `ssm_command`).
-  Consumes `vpc_id` + `subnet_id` from `vpc`. Unlike `compute-engine`, there is **no `access_members`**
+  Consumes `vpc_id`, `vpc_cidr`, + `subnet_id` from `vpc` — the CIDR (for SG ingress) arrives as a
+  **value through the dependency**, not a live `aws_vpc` lookup, so `ec2` plans greenfield on mock
+  outputs instead of failing on a non-existent VPC id. Unlike `compute-engine`, there is **no `access_members`**
   — Session Manager rights are an IAM concern on the *caller* (`ssm:StartSession`), not on the module.
   Each entry can attach **extra scoped IAM policies** to its instance role via **`iam_role_policy_arns`**
   (merged *atop* the always-on `AmazonSSMManagedInstanceCore`), so a consumer grants e.g. read of one
@@ -54,8 +56,8 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
   wrapper over `terraform-aws-modules/vpc/aws` (`~> 6.0`): a VPC + **per-AZ** private/public subnets
   (`az_count`, default `2`; each a `/20` via `cidrsubnet`) + a single **NAT gateway**
   (`enable_nat_gateway`, default `true`) for private-instance egress. Inputs `cidr_block` /
-  `az_count` / `enable_nat_gateway`; outputs `vpc_id`, `private_subnet_ids`, `public_subnet_ids`,
-  `region`. The GCP analog mapping is `network_self_link` → `vpc_id`, `subnetwork_self_link` →
+  `az_count` / `enable_nat_gateway`; outputs `vpc_id`, `vpc_cidr_block`, `private_subnet_ids`,
+  `public_subnet_ids`, `region`. The GCP analog mapping is `network_self_link` → `vpc_id`, `subnetwork_self_link` →
   `private_subnet_ids[0]`.
 
 ## [0.4.0] - 2026-06-15

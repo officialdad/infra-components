@@ -43,17 +43,3 @@ jobs:
           cd ${{ matrix.component }}/terraform
           tflint --init --config="$GITHUB_WORKSPACE/.tflint.hcl"
           tflint --config="$GITHUB_WORKSPACE/.tflint.hcl"
-
-  # Server-side net for the .github/workflows/* themselves (also enforced locally via pre-commit).
-  # Grabs the official prebuilt binary (script + version pinned to v1.7.12) — no Go build, runs in seconds.
-  actionlint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: actionlint
-        run: |
-          curl -sSfL -o download-actionlint.bash \
-            https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash
-          bash download-actionlint.bash 1.7.12
-          ./actionlint -color

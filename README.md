@@ -138,8 +138,18 @@ track a branch (`?ref=main`) while iterating; prod pins a tag.
 
 ## Commits
 
-Plain, imperative subject lines. Reference an issue if there is one. (We deliberately do **not**
-require conventional-commits / semantic-release — tagging is manual and deliberate.)
+**[Conventional Commits](https://www.conventionalcommits.org/)** — `type(scope): subject`, with an
+imperative subject. `type` is `feat` / `fix` / `docs` / `refactor` / `chore` / `ci` / `revert`;
+`scope` is the component, e.g. `feat(ec2): add ami_ssm_parameter`, `fix(vpc): ...`. Mark a breaking
+change with `feat(ec2)!:` or a `BREAKING CHANGE:` footer. Reference an issue if there is one.
+
+The format is enforced on the `commit-msg` stage by
+[`conventional-pre-commit`](https://github.com/compilerla/conventional-pre-commit) — run
+`pre-commit install` once per clone (it wires both stages). `feat`/`fix`/breaking line up with the
+PR template's **Type** field and the CHANGELOG sections.
+
+**Tagging stays manual and deliberate** — we do **not** auto-release on merge. A human cuts the
+version tag after a change has soaked in dev (see [Versioning & releasing](#versioning--releasing)).
 
 ## Toolchain
 

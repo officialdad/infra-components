@@ -149,6 +149,11 @@ terraform -chdir=<component>/terraform validate
 leave dead variables/locals/outputs. Don't commit `.terraform/`, lock files, or state (`.gitignore`
 covers them).
 
+**Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/)** —
+`type(scope): subject` (`feat(ec2): …`, `fix(vpc): …`, `docs: …`; `!`/`BREAKING CHANGE:` for
+breaking). Enforced on the `commit-msg` stage by `conventional-pre-commit`; `--no-verify` is denied
+by `tf-guard.sh`, so write them right. Tagging stays manual (see README releasing).
+
 ## Releasing
 
 Git tags `vMAJOR.MINOR.PATCH`, consumed via `?ref=<tag>`. MAJOR = breaking input/output change.

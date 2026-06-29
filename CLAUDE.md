@@ -157,8 +157,12 @@ by `tf-guard.sh`, so write them right. Tagging stays manual (see README releasin
 ## Releasing
 
 Git tags `vMAJOR.MINOR.PATCH`, consumed via `?ref=<tag>`. MAJOR = breaking input/output change.
-Move `[Unreleased]` → a dated version section, update the compare links, tag, and push branch+tag
-together. Full steps in [README.md](./README.md#versioning--releasing).
+Cut releases with **`/release X.Y.Z`** (or `scripts/release.sh X.Y.Z`) — it promotes `[Unreleased]`
+→ a dated `## [X.Y.Z]` section, fixes the compare links, and commits + tags **locally** (nothing
+pushed); review, then `git push origin main vX.Y.Z`. A native **`pre-push` guard**
+(`scripts/check-release-tag.sh`, installed by `scripts/setup-hooks.sh`) blocks a tag push whose
+version isn't promoted in the CHANGELOG. Tagging stays manual and deliberate — never auto-released on
+merge. Full steps in [README.md](./README.md#versioning--releasing).
 
 ## Guardrails
 

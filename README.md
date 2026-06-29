@@ -112,31 +112,31 @@ track a branch (`?ref=main`) while iterating; prod pins a tag.
 - **MINOR** — new feature, backward compatible.
 - **PATCH** — bug fix, no interface change.
 
-### Releasing (manual)
+### Releasing
+
+Steps 3–4 (promote the CHANGELOG, commit, tag) are automated — you pick the version and confirm the
+irreversible push; the tooling does the surgery. One-time per clone: run
+[`scripts/setup-hooks.sh`](./scripts/setup-hooks.sh) to install the git hooks (Claude Code runs it on
+session start).
 
 1. Make the module change on a branch, open a PR, merge to `main`.
 2. `infra-environments-dev` (tracks `main`) picks it up — apply and let it soak.
-3. Update [CHANGELOG.md](./CHANGELOG.md):
-   - Keep entries **lean** — one line per change (`**scope:** summary`). CI drafts them from commits
-     and comments the draft on your PR ([`cliff.toml`](./cliff.toml)); curate it in.
-   - Move `[Unreleased]` content into a new `## [X.Y.Z] - YYYY-MM-DD` section.
-   - Add a compare link at the bottom for the new version.
-   - Update the `[Unreleased]` link to `compare/vX.Y.Z...HEAD`.
-   ```
-   [Unreleased]: https://github.com/officialdad/infra-components/compare/vX.Y.Z...HEAD
-   [X.Y.Z]: https://github.com/officialdad/infra-components/compare/vPREV...vX.Y.Z
-   ```
-4. Commit the CHANGELOG update, tag, and push both in one command:
-   ```bash
-   git add CHANGELOG.md
-   git commit -m "chore(release): vX.Y.Z"
-   git tag vX.Y.Z
-   git push origin main vX.Y.Z
-   ```
-   `git push origin main vX.Y.Z` pushes the branch and tag atomically — avoids
-   the tag landing on a different commit if something races, and keeps the push log clean.
-   Pushing the tag triggers [`changelog.yml`](./.github/workflows/changelog.yml), which generates
-   the **GitHub Release** notes from the tagged commits — no hand-written release notes.
+3. Cut the release from `main` (after it has soaked):
+   - In Claude Code: **`/release X.Y.Z`** — previews the CHANGELOG diff, then pushes on your confirm.
+   - By hand: **`scripts/release.sh X.Y.Z`**.
+
+   Either way [`scripts/release.sh`](./scripts/release.sh) promotes `[Unreleased]` →
+   `## [X.Y.Z] - <today>`, fixes the two compare links, and commits `chore(release): vX.Y.Z` + tags
+   `vX.Y.Z` — **locally, nothing pushed**. Review with `git show vX.Y.Z`; undo with
+   `git tag -d vX.Y.Z && git reset --hard HEAD~1`. (Keep `[Unreleased]` lean as you go — CI drafts
+   entries from commits and comments them on your PR via [`cliff.toml`](./cliff.toml); curate them in
+   so promotion is just a relocation.)
+4. Publish: `git push origin main vX.Y.Z` (branch + tag atomically — avoids the tag landing on a
+   different commit if something races). A **`pre-push` guard**
+   ([`scripts/check-release-tag.sh`](./scripts/check-release-tag.sh)) refuses the push unless the
+   CHANGELOG was promoted to match the tag. The pushed tag triggers
+   [`changelog.yml`](./.github/workflows/changelog.yml), which generates the **GitHub Release** notes
+   from the tagged commits — no hand-written release notes.
 5. Promote to prod: PR in `infra-environments-prod` bumping the component's `versions.hcl`
    (`"vOLD"` → `"vX.Y.Z"`), reviewed, then apply.
 
@@ -149,8 +149,9 @@ change with `feat(ec2)!:` or a `BREAKING CHANGE:` footer. Reference an issue if 
 
 The format is enforced on the `commit-msg` stage by
 [`conventional-pre-commit`](https://github.com/compilerla/conventional-pre-commit) — run
-`pre-commit install` once per clone (it wires both stages). `feat`/`fix`/breaking line up with the
-PR template's **Type** field and the CHANGELOG sections.
+[`scripts/setup-hooks.sh`](./scripts/setup-hooks.sh) once per clone (it wires the pre-commit,
+commit-msg, and pre-push hooks). `feat`/`fix`/breaking line up with the PR template's **Type** field
+and the CHANGELOG sections.
 
 **Tagging stays manual and deliberate** — we do **not** auto-release on merge. A human cuts the
 version tag after a change has soaked in dev (see [Versioning & releasing](#versioning--releasing)).

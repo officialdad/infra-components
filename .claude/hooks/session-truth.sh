@@ -5,15 +5,15 @@ set -uo pipefail
 
 root="$(git rev-parse --show-toplevel 2>/dev/null || echo .)"
 
-# Install this repo's git hooks (fmt/validate/tflint pre-commit + Conventional Commits commit-msg)
-# so the agent's own commits go through them — combined with the --no-verify denial in tf-guard,
-# they can't be skipped. Idempotent and fast (environments build lazily on first commit).
-if command -v pre-commit >/dev/null 2>&1 && [ -f "$root/.pre-commit-config.yaml" ]; then
-  ( cd "$root" && pre-commit install >/dev/null 2>&1 ) &&
-    hooks="git hooks: installed (pre-commit + commit-msg)" ||
-    hooks="git hooks: install failed (run: pre-commit install)"
+# Install this repo's git hooks (pre-commit + commit-msg via the framework; native pre-push tag
+# guard) so the agent's own commits/tags go through them — combined with the --no-verify denial in
+# tf-guard, they can't be skipped. Idempotent and fast (environments build lazily on first commit).
+if [ -f "$root/scripts/setup-hooks.sh" ]; then
+  ( cd "$root" && bash scripts/setup-hooks.sh >/dev/null 2>&1 ) &&
+    hooks="git hooks: installed (pre-commit + commit-msg + pre-push)" ||
+    hooks="git hooks: partial install — run scripts/setup-hooks.sh (pre-commit installed?)"
 else
-  hooks="git hooks: pre-commit NOT installed — commits unchecked locally (install: pipx install pre-commit)"
+  hooks="git hooks: scripts/setup-hooks.sh missing — commits/tags unchecked locally"
 fi
 
 if command -v terraform >/dev/null 2>&1; then

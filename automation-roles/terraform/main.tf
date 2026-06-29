@@ -79,52 +79,21 @@ resource "aws_iam_role" "ci" {
 # tighten iteratively from plan errors. Most EC2/VPC create+describe actions don't support
 # resource-level scoping, hence Resource = "*"; IAM and SSM are scoped.
 data "aws_iam_policy_document" "permissions" {
-  # VPC + EC2 (all the ec2: service: vpc, subnet, route table, IGW, NAT, EIP, SG, instances).
+  # VPC + EC2. EC2 actions almost all require Resource = "*" (no resource-level scoping), so
+  # enumerating verbs is churn without real isolation — the privilege-escalation surface is IAM,
+  # which stays scoped below. Bound instead by region: the role can only act on EC2 in this env's
+  # deploy_region.
   statement {
-    sid    = "VpcAndEc2"
-    effect = "Allow"
-    actions = [
-      "ec2:Describe*",
-      "ec2:CreateTags",
-      "ec2:DeleteTags",
-      "ec2:CreateVpc",
-      "ec2:DeleteVpc",
-      "ec2:ModifyVpcAttribute",
-      "ec2:CreateSubnet",
-      "ec2:DeleteSubnet",
-      "ec2:ModifySubnetAttribute",
-      "ec2:CreateRouteTable",
-      "ec2:DeleteRouteTable",
-      "ec2:AssociateRouteTable",
-      "ec2:DisassociateRouteTable",
-      "ec2:CreateRoute",
-      "ec2:DeleteRoute",
-      "ec2:CreateInternetGateway",
-      "ec2:DeleteInternetGateway",
-      "ec2:AttachInternetGateway",
-      "ec2:DetachInternetGateway",
-      "ec2:CreateNatGateway",
-      "ec2:DeleteNatGateway",
-      "ec2:AllocateAddress",
-      "ec2:ReleaseAddress",
-      "ec2:AssociateAddress",
-      "ec2:DisassociateAddress",
-      "ec2:CreateSecurityGroup",
-      "ec2:DeleteSecurityGroup",
-      "ec2:AuthorizeSecurityGroupIngress",
-      "ec2:AuthorizeSecurityGroupEgress",
-      "ec2:RevokeSecurityGroupIngress",
-      "ec2:RevokeSecurityGroupEgress",
-      "ec2:ModifySecurityGroupRules",
-      "ec2:UpdateSecurityGroupRuleDescriptionsIngress",
-      "ec2:UpdateSecurityGroupRuleDescriptionsEgress",
-      "ec2:RunInstances",
-      "ec2:TerminateInstances",
-      "ec2:StartInstances",
-      "ec2:StopInstances",
-      "ec2:ModifyInstanceAttribute",
-    ]
+    sid       = "VpcAndEc2"
+    effect    = "Allow"
+    actions   = ["ec2:*"]
     resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values   = [var.global.deploy_region]
+    }
   }
 
   # IAM: the ec2 module's create_iam_instance_profile builds an instance role + profile and attaches

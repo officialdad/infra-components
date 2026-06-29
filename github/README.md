@@ -5,10 +5,14 @@ and the module creates/configures one repo per entry — visibility, description
 default branch, and optional branch protection. Adding or changing a repo is a single map
 edit on the consumer side; the module never changes.
 
-This is the **first component that needs a credential** (a `GITHUB_TOKEN`), so unlike `dummy`
-it cannot run on the credential-free `TG_BACKEND=local` path. Because GitHub repos are
-**org-scoped, not per-environment**, exactly one environment should own this component —
-`infra-environments-dev` is the designated owner.
+This component **needs a credential** (a `GITHUB_TOKEN`), so it cannot run on the credential-free
+`TG_BACKEND=local` path. Because GitHub repos are **org-scoped, not per-environment**, exactly one
+environment should own this component — `infra-environments-dev` is the designated owner.
+
+> **Exception to the `global` convention:** unlike every other component, `github` takes **no
+> `global` object**. Its resources are org-scoped (not environment-scoped) and `github_repository`
+> has nothing to tag, so a `global` input would be dead — and the repo's `tflint` (recommended
+> preset) flags unused declarations. See [CONVENTIONS.md](../CONVENTIONS.md#the-global-object).
 
 ## What it creates
 
@@ -41,7 +45,6 @@ export GITHUB_TOKEN=ghp_...
 
 | Name                      | Type        | Default       | Description                                                        |
 | ------------------------- | ----------- | ------------- | ------------------------------------------------------------------ |
-| `global`                  | object      | —             | Env-wide context. Accepted for convention only; **unused** here.   |
 | `github_owner`            | string      | `officialdad` | The GitHub org (or user) the provider operates on.                 |
 | `default_team`            | string      | `engineers`   | Team slug granted to every repo by default; `""` disables.         |
 | `default_team_permission` | string      | `push`        | Default team's access: `pull`/`triage`/`push`/`maintain`/`admin`.  |

@@ -46,7 +46,7 @@ Each component's `terraform/` directory follows the same layout:
 ```
 <component>/terraform/
 ├── versions.tf     # required_version + required_providers
-├── variables.tf    # inputs (always includes a `global` object, see below)
+├── variables.tf    # inputs (includes a `global` object, see below — `github` is the one exception)
 ├── main.tf         # the resources
 └── outputs.tf      # values consumed by downstream components
 ```
@@ -54,7 +54,8 @@ Each component's `terraform/` directory follows the same layout:
 ### The `global` convention
 
 Every component takes a `global` object carrying environment-wide context
-(name, region, tags). The environments repo passes this once via a shared `global.tfvars`,
+(name, region, tags) — the one exception is `github`, whose resources are org-scoped, not
+environment-scoped. The environments repo passes this once via a shared `global.tfvars`,
 so individual components stay generic. Example:
 
 ```hcl

@@ -4,11 +4,20 @@ provider "google" {
 }
 
 locals {
-  # GCP labels must be lowercase; only this subset of the tags convention maps cleanly.
-  labels = {
+  # GCP labels are constrained (lowercase, keys/values in [a-z0-9_-], keys start with a letter,
+  # <= 63 chars), unlike free-form AWS tags. Sanitize var.global.tags — replace disallowed chars
+  # with "_" and lowercase — so the env's tag contract is honored here too instead of being dropped.
+  # GCP *networking* resources can't be labeled at all (see the network component).
+  sanitized_tags = {
+    for k, v in var.global.tags :
+    lower(replace(k, "/[^a-zA-Z0-9_-]/", "_")) => lower(replace(v, "/[^a-zA-Z0-9_-]/", "_"))
+  }
+
+  # Always-on env/managed_by labels win over any same-named global tag.
+  labels = merge(local.sanitized_tags, {
     environment = lower(var.global.environment_name)
     managed_by  = "terraform"
-  }
+  })
 
   # member x instance -> one stable key per pair, so for_each never reindexes
   # when a VM or a member is added/removed.

@@ -19,7 +19,7 @@ Each component is a directory with a `terraform/` subdir:
 <component>/
 ├── README.md          # inputs/outputs table, dependencies
 └── terraform/
-    ├── versions.tf    # required_version + required_providers (pinned ~> ranges)
+    ├── versions.tf    # required_version (min floor, >= 1.5.7) + required_providers (pinned ~> ranges)
     ├── variables.tf   # inputs; first variable is always `global` (see below)
     ├── main.tf        # provider + resources
     └── outputs.tf     # values consumed by downstream components
@@ -41,7 +41,14 @@ variable "global" {
 ```
 
 Use it for naming and tags: `"${var.global.environment_name}-vpc"`, and
-`merge(var.global.tags, { ... })` on every resource.
+`merge(var.global.tags, { ... })` on every resource. On GCP, `global.tags` is sanitized into
+resource **labels** where the provider supports them (e.g. the `compute-engine` instance); GCP
+*networking* resources can't be labeled, so only naming carries through there.
+
+> **One exception:** `github` takes **no `global`**. Its resources are org-scoped, not
+> environment-scoped, and `github_repository` has nothing to tag — a `global` input would be a
+> dead declaration (which `tflint`'s recommended preset flags). Every other component takes
+> `global` as its first variable.
 
 ## Naming
 

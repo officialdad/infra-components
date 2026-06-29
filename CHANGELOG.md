@@ -60,6 +60,23 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
   `public_subnet_ids`, `region`. The GCP analog mapping is `network_self_link` → `vpc_id`, `subnetwork_self_link` →
   `private_subnet_ids[0]`.
 
+### Changed
+- **`compute-engine` now honors `global.tags`.** Instance `labels` previously carried only
+  `environment` + `managed_by`; they now also include `global.tags`, sanitized to GCP's label rules
+  (lowercased, chars outside `[a-z0-9_-]` → `_`), with the env/managed_by labels winning on any
+  name clash. In-place update, no recreate. (GCP *networking* resources still can't be labeled — see
+  `network`.)
+- **Standardized `versions.tf`.** `required_version` is now `>= 1.5.7` across all components (was a
+  mix of `>= 1.5` / `>= 1.5.7`); `ec2`'s AWS provider pin is now the bounded `~> 6.37` (was the
+  unbounded `>= 6.37`), matching the `~>` style used by the other components.
+
+### Fixed
+- **CI now lints `automation-roles`.** It was missing from the `.github/workflows/ci.yml` matrix, so
+  it was never `fmt`/`validate`/`tflint`'d.
+- **`github` docs.** Dropped a stale reference to the removed `dummy` component and a phantom
+  `global` input row — `github` intentionally takes no `global` (now a documented exception in
+  CONVENTIONS).
+
 ## [0.4.0] - 2026-06-15
 
 > **Cloud pivot:** the org is moving to **GCP**. New components target `hashicorp/google`; the

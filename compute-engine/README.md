@@ -12,7 +12,9 @@ port, no key files to manage). The module is **bootstrap-agnostic** — it runs 
 For each entry in `instances` (keyed by a short name — that key also keys the `instances` **output**; the VM's GCP name is `<environment_name>-<key>`, so a `postiz` key → output `instances["postiz"]` whose `.name` is `dev-postiz`):
 
 - `google_compute_instance` — the VM. No external IP by default; `enable-oslogin = TRUE` so SSH
-  access is governed by IAM, not project metadata keys. Runs that entry's `startup_script` on first
+  access is governed by IAM, not project metadata keys. Labeled with `environment` + `managed_by`
+  plus your `global.tags`, sanitized to GCP's label rules (lowercased; chars outside `[a-z0-9_-]`
+  become `_`). Runs that entry's `startup_script` on first
   boot (empty string = no bootstrap). **This module is bootstrap-agnostic** — the actual first-boot
   script (e.g. installing Docker) is **userdata owned by the consuming environment**, not baked into
   the module. See "Bootstrap / userdata" below.

@@ -1,0 +1,20 @@
+# markdownlint config for the human docs (component READMEs + root README + CHANGELOG + CLAUDE.md).
+# Scope is set by the pre-commit `files:` regex and the CI globs — vendored .agents/.claude skills and
+# the .github template are NOT linted. Tuned for prose plus terraform-docs-generated tables.
+default: true
+
+# Line length: off. terraform-docs type columns and wrapped prose both legitimately exceed any cap.
+MD013: false
+
+# Inline HTML: off. terraform-docs output is inherently HTML-bearing — <pre>/<br/> in the Type
+# column and literal placeholder strings like "<env>-<key>" in descriptions — so the rule fights
+# generated content. (Hand-written prose rarely needs raw HTML anyway.)
+MD033: false
+
+# Duplicate headings are fine under different parents (e.g. repeated "### …" subsections).
+MD024:
+  siblings_only: true
+
+# Table pipe alignment: off. Cosmetic, and terraform-docs emits compact (unpadded) tables that can't
+# satisfy the "aligned" style — the generated Inputs/Outputs blocks would never pass otherwise.
+MD060: false

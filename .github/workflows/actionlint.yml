@@ -1,0 +1,30 @@
+name: actionlint
+
+# Lint the workflow files themselves (also enforced locally via pre-commit).
+# Path-scoped: only runs when something under .github/ changes — Terraform-only PRs skip it.
+# Don't make this a *required* status check while it's path-filtered: a required check that is
+# skipped by paths never reports, leaving PRs stuck "waiting for status".
+
+on:
+  pull_request:
+    paths: ['.github/**']
+  push:
+    branches: [main]
+    paths: ['.github/**']
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # Official prebuilt binary (script + version pinned to v1.7.12) — no Go build, runs in seconds.
+      - name: actionlint
+        run: |
+          curl -sSfL -o download-actionlint.bash \
+            https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash
+          bash download-actionlint.bash 1.7.12
+          ./actionlint -color

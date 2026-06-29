@@ -34,7 +34,7 @@ For each entry in `instances` (keyed by a short name — that key also keys the 
 
 ## Access model ("SSM Session Manager")
 
-```
+```text
 you / CI principal
    │  (your IAM identity: ssm:StartSession)
    ▼
@@ -96,41 +96,50 @@ Provider needs AWS credentials (env vars, shared config, or an instance/CI role)
 security groups, and IAM roles/instance profiles. To *connect* via Session Manager, your own IAM
 identity needs `ssm:StartSession` on the target instance.
 
-## Inputs
+## Dependencies
 
-| Name        | Type        | Default | Description                                                                                       |
-| ----------- | ----------- | ------- | ------------------------------------------------------------------------------------------------ |
-| `global`    | object      | —       | Env-wide context (`environment_name`, `deploy_region`, `tags`).                                  |
-| `vpc_id`    | string      | —       | VPC the instances and their security group live in (from `vpc.vpc_id`).                            |
-| `vpc_cidr`  | string      | —       | VPC CIDR for SG ingress rules (from `vpc.vpc_cidr_block`). Passed as a value so `ec2` plans greenfield — no live `aws_vpc` lookup. |
-| `subnet_id` | string      | —       | Subnet all instances launch into (from `vpc.private_subnet_ids[0]`). Use a **private** subnet for the no-public-IP, SSM-only model. |
-| `instances` | map(object) | `{}`    | Instances to create, keyed by short name. Per-instance fields below; each entry overrides only what it needs. |
+- **Consumes** `vpc_id`, `vpc_cidr` (`vpc.vpc_cidr_block`), and `subnet_id`
+  (`vpc.private_subnet_ids[0]`) from the **`vpc`** component.
+- **Relies on** the `vpc`'s NAT gateway for outbound — so the SSM agent can dial out and any
+  bootstrap can fetch packages.
 
-Per-instance fields inside each `instances` entry (all optional):
+### `instances` entry shape
 
-| Field               | Default     | Description                                                                  |
-| ------------------- | ----------- | --------------------------------------------------------------------------- |
-| `instance_type`     | `t3.micro`  | EC2 instance type.                                                          |
-| `ami`               | `""`        | Literal AMI id (wins if set). Empty → resolve via `ami_ssm_parameter`.       |
-| `ami_ssm_parameter` | `""`        | Public SSM parameter tracking the latest image for an OS, resolved per-region. Empty → latest Amazon Linux 2023. E.g. Ubuntu 26.04: `/aws/service/canonical/ubuntu/server/26.04/stable/current/amd64/hvm/ebs-gp3/ami-id`. |
-| `root_disk_size_gb` | `20`        | Root EBS volume size in GB.                                                  |
-| `assign_public_ip`  | `false`     | Attach a public IP. Leave `false` for the SSM-only model.                    |
-| `user_data`         | `""`        | First-boot script (userdata). Empty = no bootstrap. Supplied by the env.    |
-| `ingress_rules`     | `[]`        | Named SG ingress rules to open on this instance (e.g. `["prometheus-http-tcp"]`), reachable from the VPC CIDR only. Empty = SSM-only, no inbound. |
-| `iam_role_policy_arns` | `{}`     | Extra IAM policy ARNs to attach to this instance's role, keyed by a **static** name (e.g. `{ tunnel = aws_iam_policy.x.arn }`). Merged **on top of** the always-on `AmazonSSMManagedInstanceCore`, so SSM access is never lost. The component stays generic — it attaches whatever you pass; the **consumer composes the scoped policy** (e.g. read one SSM SecureString param + `kms:Decrypt`). Keys must be literals (`for_each`); ARN values may be computed. |
+The generated Inputs table renders `instances` as one `map(object({…}))` with each field's default.
+Per-field intent (all optional; each entry overrides only what it sets):
+
+- `instance_type` (`t3.micro`) — EC2 instance type.
+- `ami` (`""`) — literal AMI id; wins if set. Empty → resolve via `ami_ssm_parameter`.
+- `ami_ssm_parameter` (`""`) — public SSM parameter tracking an OS's latest image, resolved
+  per-region. Empty → latest Amazon Linux 2023.
+- `root_disk_size_gb` (`20`) — root EBS volume size.
+- `assign_public_ip` (`false`) — leave `false` for the SSM-only model.
+- `user_data` (`""`) — first-boot script; empty = no bootstrap. Supplied by the env.
+- `ingress_rules` (`[]`) — named SG ingress rules (e.g. `["prometheus-http-tcp"]`), reachable from
+  the VPC CIDR only. Empty = SSM-only, no inbound.
+- `iam_role_policy_arns` (`{}`) — extra IAM policy ARNs on the instance role, keyed by a **static**
+  name, merged **on top of** the always-on `AmazonSSMManagedInstanceCore` (SSM access never lost).
+  The consumer composes the scoped policy; keys must be literals (`for_each`), ARNs may be computed.
 
 > **No `access_members`:** Session Manager access is an IAM concern on the *caller's* side
-> (`ssm:StartSession`), so it has no place in this module. Env identity (`vpc_id`, `vpc_cidr`, `subnet_id`) is
-> required with no default; the cost-safe *how* knobs (`t3.micro`, 20 GB) keep defaults, since a
-> forgotten value there is harmless.
+> (`ssm:StartSession`), so it has no place in this module. Env identity (`vpc_id`, `vpc_cidr`,
+> `subnet_id`) is required with no default; the cost-safe *how* knobs (`t3.micro`, 20 GB) keep
+> defaults, since a forgotten value there is harmless.
+
+<!-- BEGIN_TF_DOCS -->
+## Inputs
+
+| Name | Description | Type | Default | Required |
+| ---- | ----------- | ---- | ------- | :------: |
+| global | Environment-wide context injected by the environments repo (name, region, tags). | <pre>object({<br/>    environment_name = string<br/>    deploy_region    = string<br/>    tags             = map(string)<br/>  })</pre> | n/a | yes |
+| subnet\_id | Subnet all instances launch into (from vpc.private\_subnet\_ids[0]). Use a private subnet for no-public-IP, SSM-only access. | `string` | n/a | yes |
+| vpc\_cidr | VPC CIDR for SG ingress rules (from vpc.vpc\_cidr\_block). Replaces a live aws\_vpc lookup so ec2 plans greenfield. | `string` | n/a | yes |
+| vpc\_id | VPC the instances and their security group live in (from vpc.vpc\_id). | `string` | n/a | yes |
+| instances | EC2 instances keyed by short name; each entry overrides only what it needs. Name tag = "<env>-<key>". OS: literal ami wins, else ami\_ssm\_parameter tracks latest image (default Amazon Linux 2023). ingress\_rules = named SG rules (empty = SSM-only, no inbound). iam\_role\_policy\_arns = extra policy ARNs (static keys) on the instance role, atop the always-on SSM core policy. | <pre>map(object({<br/>    instance_type        = optional(string, "t3.micro")<br/>    ami                  = optional(string, "")<br/>    ami_ssm_parameter    = optional(string, "")<br/>    root_disk_size_gb    = optional(number, 20)<br/>    assign_public_ip     = optional(bool, false)<br/>    user_data            = optional(string, "")<br/>    ingress_rules        = optional(list(string), [])<br/>    iam_role_policy_arns = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
 
 ## Outputs
 
-| Name        | Type        | Description                                                                                                                          |
-| ----------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `instances` | map(object) | Per-instance details keyed by instance key. Each value has `name`, `instance_id`, `private_ip`, and a ready-to-run `ssm_command` (`aws ssm start-session …`). |
-
-## Dependencies
-
-Consumes `vpc_id`, `vpc_cidr_block`, and `subnet_id` from the `vpc` component. Relies on the `vpc`'s NAT gateway
-for outbound (so the SSM agent can dial out and any bootstrap can fetch packages).
+| Name | Description |
+| ---- | ----------- |
+| instances | Created EC2 instances keyed by their instances-map key. |
+<!-- END_TF_DOCS -->

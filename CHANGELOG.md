@@ -5,9 +5,15 @@ All notable changes to the modules in this repo are recorded here.
 Format follows [Keep a Changelog](https://keepachangelog.com/), and this repo uses
 [Semantic Versioning](https://semver.org/) via git tags (`vMAJOR.MINOR.PATCH`).
 
+**Style — keep it lean:** one line per change, `**scope:** imperative summary`. The *why* and *how*
+live in the PR and commit, not here. CI drafts the `[Unreleased]` entries from Conventional Commits
+and posts them as a comment on your PR (config: [`cliff.toml`](./cliff.toml)); curate them in — trim
+noise, keep only consumer-facing changes, add a short narrative blockquote only for a big shift.
+Tagging stays manual (see [README](./README.md#versioning--releasing)).
+
 **How this connects to the environments repos:** `infra-environments-dev` tracks `main`, so the
 `[Unreleased]` changes below are what dev runs. When a change has soaked in dev, cut a tag (see
-[CONVENTIONS.md](./CONVENTIONS.md#releasing)) and the version moves out of `[Unreleased]`. Prod
+[README.md](./README.md#versioning--releasing)) and the version moves out of `[Unreleased]`. Prod
 pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 
 - **Added** — new modules/features.
@@ -17,48 +23,21 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 
 ## [Unreleased]
 
-> **AWS components added alongside GCP — both stacks are kept.** The 0.4.0 GCP work (`network`,
-> `compute-engine`) stays as-is; new AWS analogs `vpc` and `ec2` are added next to it so an
-> environment can target either cloud. The `global` + `instances`-map interface (including the
-> multi-VM `for_each` work merged in #4) is shared verbatim across the AWS/GCP pairs; only the cloud
-> resources and field names differ. `github` is cloud-agnostic and untouched. Nothing is removed —
-> the GCP modules deleted on an earlier cut of this branch have been restored.
+> **AWS added alongside GCP — both stacks kept.** New AWS analogs `vpc` / `ec2` / `automation-roles`
+> sit beside the GCP `network` / `compute-engine`; the shared `global` + `instances`-map interface is
+> identical across the pairs (only cloud resources and field names differ). Nothing removed.
 
 ### Added
-- **`automation-roles` — AWS CI identity (GitHub-OIDC → IAM role)** (`hashicorp/aws ~> 6.0`), the AWS
-  analog of the GCP WIF work. Lets the `infra-environments-dev` pipeline assume a short-lived AWS role
-  via GitHub Actions OIDC — **no static `AWS_*` keys**. Creates the OIDC provider (toggleable, since
-  it's an account-global singleton) + a role whose trust is **ref/event-scoped by default** (`main`
-  apply, `pull_request` plan) with a **least-privilege** policy for exactly what `vpc`+`ec2` need.
-  Outputs `role_arn` (→ env repo `AWS_ROLE_ARN` secret) + `oidc_provider_arn`. **Human-applied,
-  excluded from the pipeline it bootstraps.**
-- **`ec2` — AWS EC2 compute component** (`hashicorp/aws >= 6.37`), the AWS analog of `compute-engine`.
-  A thin wrapper over two verified modules: [`terraform-aws-modules/ec2-instance/aws`](https://registry.terraform.io/modules/terraform-aws-modules/ec2-instance/aws)
-  (`~> 6.0`) builds the instance + its IAM role/instance profile (`create_iam_instance_profile` with
-  the managed `AmazonSSMManagedInstanceCore` policy) and enforces **IMDSv2**; [`terraform-aws-modules/security-group/aws`](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws)
-  (`~> 5.0`) builds a **per-instance** SG. One or more instances via an `instances` map (`for_each`) —
-  add a key to add an instance — each with **no public IP** by default. Access is **SSM Session
-  Manager** (the IAP/OS Login analog); the SG is **egress-only by default** (SSM dials out via the
-  `vpc`'s NAT). Each entry takes a per-instance **`ingress_rules`** list of *named* rules (e.g.
-  `["prometheus-http-tcp"]` → 9090) opened **from the VPC CIDR only** (east-west; public exposure is
-  the consuming env's job, e.g. a Cloudflare Tunnel in `user_data`). **Bootstrap-agnostic**
-  (`user_data` per instance, `""` = none). AMI defaults to the latest **Amazon Linux 2023** via the
-  module's `ami_ssm_parameter`. Instance `Name` tag = `<environment_name>-<key>`; outputs a single
-  `instances` map keyed by instance key (`name`, `instance_id`, `private_ip`, `ssm_command`).
-  Consumes `vpc_id`, `vpc_cidr`, + `subnet_id` from `vpc` — the CIDR (for SG ingress) arrives as a
-  **value through the dependency**, not a live `aws_vpc` lookup, so `ec2` plans greenfield on mock
-  outputs instead of failing on a non-existent VPC id. Unlike `compute-engine`, there is **no `access_members`**
-  — Session Manager rights are an IAM concern on the *caller* (`ssm:StartSession`), not on the module.
-  Each entry can attach **extra scoped IAM policies** to its instance role via **`iam_role_policy_arns`**
-  (merged *atop* the always-on `AmazonSSMManagedInstanceCore`), so a consumer grants e.g. read of one
-  SSM SecureString param — without touching the component.
-- **`vpc` — AWS network foundation** (`hashicorp/aws ~> 6.0`), the AWS analog of `network`. A thin
-  wrapper over `terraform-aws-modules/vpc/aws` (`~> 6.0`): a VPC + **per-AZ** private/public subnets
-  (`az_count`, default `2`; each a `/20` via `cidrsubnet`) + a single **NAT gateway**
-  (`enable_nat_gateway`, default `true`) for private-instance egress. Inputs `cidr_block` /
-  `az_count` / `enable_nat_gateway`; outputs `vpc_id`, `vpc_cidr_block`, `private_subnet_ids`,
-  `public_subnet_ids`, `region`. The GCP analog mapping is `network_self_link` → `vpc_id`, `subnetwork_self_link` →
-  `private_subnet_ids[0]`.
+- **automation-roles:** AWS CI identity — GitHub-OIDC → least-privilege IAM role for `vpc`+`ec2`, no static keys; human-applied, off-pipeline. Outputs `role_arn`, `oidc_provider_arn`
+- **ec2:** AWS EC2 component wrapping `ec2-instance` + `security-group` — `instances` map, no public IP, SSM-only access, IMDSv2; per-instance `ingress_rules` (VPC-CIDR-scoped) + `iam_role_policy_arns`; Amazon Linux 2023 by default
+- **vpc:** AWS network foundation wrapping `terraform-aws-modules/vpc` — per-AZ public/private subnets + single NAT gateway
+
+### Changed
+- **compute-engine:** honor `global.tags` as sanitized GCP labels (parity with AWS; in-place, no recreate)
+- **versions.tf:** require Terraform `>= 1.5.7` across all components; bound `ec2`'s AWS provider to `~> 6.37`
+
+### Fixed
+- **github:** drop a phantom `global` input row from the docs — `github` takes no `global` (documented exception)
 
 ## [0.4.0] - 2026-06-15
 

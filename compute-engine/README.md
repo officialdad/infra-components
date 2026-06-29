@@ -12,7 +12,9 @@ port, no key files to manage). The module is **bootstrap-agnostic** — it runs 
 For each entry in `instances` (keyed by a short name — that key also keys the `instances` **output**; the VM's GCP name is `<environment_name>-<key>`, so a `postiz` key → output `instances["postiz"]` whose `.name` is `dev-postiz`):
 
 - `google_compute_instance` — the VM. No external IP by default; `enable-oslogin = TRUE` so SSH
-  access is governed by IAM, not project metadata keys. Runs that entry's `startup_script` on first
+  access is governed by IAM, not project metadata keys. Labeled with `environment` + `managed_by`
+  plus your `global.tags`, sanitized to GCP's label rules (lowercased; chars outside `[a-z0-9_-]`
+  become `_`). Runs that entry's `startup_script` on first
   boot (empty string = no bootstrap). **This module is bootstrap-agnostic** — the actual first-boot
   script (e.g. installing Docker) is **userdata owned by the consuming environment**, not baked into
   the module. See "Bootstrap / userdata" below.
@@ -30,7 +32,7 @@ assumes it is attached to a `network` created by that component (or an equivalen
 
 ## Access model ("SSM-like")
 
-```
+```text
 you / CI service account
    │  (identity + IAM: compute.osLogin + iap.tunnelResourceAccessor)
    ▼
@@ -85,28 +87,25 @@ account); region from `var.global.deploy_region`. The principal running `apply` 
 create instances and set IAM on them, and the **OS Login API**, **Compute API**, and **IAP API**
 must be enabled on the project.
 
-## Inputs
+## Dependencies
 
-| Name             | Type         | Default | Description                                                                                       |
-| ---------------- | ------------ | ------- | ------------------------------------------------------------------------------------------------ |
-| `global`         | object       | —       | Env-wide context (`environment_name`, `deploy_region`, `tags`).                                  |
-| `project_id`     | string       | —       | **Required.** GCP project the VMs are created in. Set per environment (see note below).          |
-| `network`        | string       | —       | Network self link / name (from `network.network_self_link`). Shared by all VMs.                  |
-| `subnetwork`     | string       | —       | Subnetwork self link / name (from `network.subnetwork_self_link`). Shared by all VMs.            |
-| `access_members` | list(string) | `[]`    | IAM principals granted OS Login + IAP access on **every** VM. Empty = no SSH access (see note).  |
-| `instances`      | map(object)  | `{}`    | VMs to create, keyed by short name. Per-VM fields below; each entry overrides only what it needs. |
+- **Consumes** `network` (`network.network_self_link`) and `subnetwork`
+  (`network.subnetwork_self_link`) from the **`network`** component.
+- **Relies on** the `network`'s `allow-iap-ssh` firewall rule (inbound SSH from IAP) and Cloud NAT
+  (outbound, for the Docker install).
 
-Per-VM fields inside each `instances` entry (all optional):
+### `instances` entry shape
 
-| Field               | Default                  | Description                                                              |
-| ------------------- | ------------------------ | ----------------------------------------------------------------------- |
-| `machine_type`      | `e2-micro`               | Machine type.                                                            |
-| `boot_image`        | `debian-cloud/debian-12` | Boot image (`project/family` or full self link).                        |
-| `boot_disk_size_gb` | `20`                     | Boot disk size in GB.                                                    |
-| `zone`              | `""`                     | Zone. Empty → `"<deploy_region>-a"`.                                     |
-| `assign_public_ip`  | `false`                  | Attach an ephemeral external IP. Leave `false` for the IAP-only model.   |
-| `startup_script`    | `""`                     | First-boot script (userdata). Empty = no bootstrap. Supplied by the env. |
-| `network_tags`      | `[]`                     | Firewall tags (e.g. `[network.ssh_tag]`). Empty = no tag-scoped inbound. |
+The generated Inputs table renders `instances` as one `map(object({…}))` with each field's default.
+Per-field intent (all optional; each entry overrides only what it sets):
+
+- `machine_type` (`e2-micro`) — machine type.
+- `boot_image` (`debian-cloud/debian-12`) — boot image (`project/family` or full self link).
+- `boot_disk_size_gb` (`20`) — boot disk size.
+- `zone` (`""`) — empty → `"<deploy_region>-a"`.
+- `assign_public_ip` (`false`) — leave `false` for the IAP-only model.
+- `startup_script` (`""`) — first-boot script; empty = no bootstrap. Supplied by the env.
+- `network_tags` (`[]`) — firewall tags (e.g. `[network.ssh_tag]`). Empty = no tag-scoped inbound.
 
 > **Why `project_id` is required and `access_members` defaults to `[]`:** a reusable module should
 > know *how* to build a VM, never *where* or *who* — that's environment identity, owned by the call
@@ -115,13 +114,21 @@ Per-VM fields inside each `instances` entry (all optional):
 > "no access" (safe when forgotten) rather than a hard-coded person. The cost-safe *how* knobs
 > (`e2-micro`, `debian-12`, 20 GB) keep defaults, since a forgotten value there is harmless.
 
+<!-- BEGIN_TF_DOCS -->
+## Inputs
+
+| Name | Description | Type | Default | Required |
+| ---- | ----------- | ---- | ------- | :------: |
+| global | Environment-wide context injected by the environments repo (name, region, tags). | <pre>object({<br/>    environment_name = string<br/>    deploy_region    = string<br/>    tags             = map(string)<br/>  })</pre> | n/a | yes |
+| network | Network self link or name (from network.network\_self\_link). Shared by all instances. | `string` | n/a | yes |
+| project\_id | GCP project the VMs are created in. Required — set per environment so a forgotten value fails loudly instead of silently landing resources in the wrong project (e.g. prod into dev). | `string` | n/a | yes |
+| subnetwork | Subnetwork self link or name (from network.subnetwork\_self\_link). Shared by all instances. | `string` | n/a | yes |
+| access\_members | IAM principals (user:/group:/serviceAccount:) granted OS Login + IAP tunnel access on EVERY VM. Empty = no SSH access; each environment opts in its own people. | `list(string)` | `[]` | no |
+| instances | VMs to create, keyed by short name. Each entry overrides only the fields it needs; the rest take module defaults. VM name = "<env>-<key>". | <pre>map(object({<br/>    machine_type      = optional(string, "e2-micro")<br/>    boot_image        = optional(string, "debian-cloud/debian-12")<br/>    boot_disk_size_gb = optional(number, 20)<br/>    zone              = optional(string, "")<br/>    assign_public_ip  = optional(bool, false)<br/>    startup_script    = optional(string, "")<br/>    network_tags      = optional(list(string), [])<br/>  }))</pre> | `{}` | no |
+
 ## Outputs
 
-| Name        | Type        | Description                                                                                                                                                                |
-| ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `instances` | map(object) | Per-VM details keyed by instance key. Each value has `name`, `instance_id`, `internal_ip`, `zone`, and a ready-to-run `ssh_command` (`gcloud compute ssh … --tunnel-through-iap`). |
-
-## Dependencies
-
-Consumes `network` and `subnetwork` from the `network` component. Relies on the `network`'s `allow-iap-ssh`
-firewall rule (inbound SSH from IAP) and Cloud NAT (outbound, for the Docker install).
+| Name | Description |
+| ---- | ----------- |
+| instances | Per-instance details keyed by instance key: name, instance\_id, internal\_ip, zone, and a ready-to-run IAP ssh\_command. |
+<!-- END_TF_DOCS -->

@@ -53,26 +53,31 @@ resources (network, subnetwork, router, firewall) **don't support labels**, so t
 only honored where the provider allows it (e.g. the instance in `compute-engine`). Naming still
 follows `<environment_name>-network[-purpose]`.
 
+## Dependencies
+
+- **Upstream:** none — `network` is a GCP network foundation.
+- **Consumed by `compute-engine`:** `network_self_link` → `network`, `subnetwork_self_link` →
+  `subnetwork`, `ssh_tag` → one of `network_tags`.
+
+<!-- BEGIN_TF_DOCS -->
 ## Inputs
 
-| Name              | Type   | Default        | Description                                                        |
-| ----------------- | ------ | -------------- | ------------------------------------------------------------------ |
-| `global`          | object | —              | Env-wide context (`environment_name`, `deploy_region`, `tags`).    |
-| `project_id`      | string | —              | GCP project the network is created in.                             |
-| `subnet_cidr`     | string | `10.0.0.0/16`  | Primary IPv4 range of the regional subnetwork.                     |
-| `enable_cloud_nat`| bool   | `true`         | Create Cloud Router + NAT for egress from private instances.       |
-| `enable_iap_ssh`  | bool   | `true`         | Add a firewall rule allowing IAP (`35.235.240.0/20`) on tcp:22.    |
+| Name | Description | Type | Default | Required |
+| ---- | ----------- | ---- | ------- | :------: |
+| global | Environment-wide context injected by the environments repo (name, region, tags). | <pre>object({<br/>    environment_name = string<br/>    deploy_region    = string<br/>    tags             = map(string)<br/>  })</pre> | n/a | yes |
+| project\_id | GCP project the network is created in. | `string` | n/a | yes |
+| enable\_cloud\_nat | Create Cloud Router + NAT so instances with no external IP get egress. | `bool` | `true` | no |
+| enable\_iap\_ssh | Allow SSH (tcp:22) from Google's IAP range so --tunnel-through-iap works. | `bool` | `true` | no |
+| subnet\_cidr | Primary IPv4 range of the regional subnetwork. | `string` | `"10.0.0.0/16"` | no |
 
 ## Outputs
 
-| Name                   | Description                                                  |
-| ---------------------- | ------------------------------------------------------------ |
-| `network_name`         | The VPC network name.                                        |
-| `network_self_link`    | The network self link (pass to `compute-engine.network`).    |
-| `subnetwork_name`      | The regional subnetwork name.                                |
-| `subnetwork_self_link` | The subnetwork self link (pass to `compute-engine.subnetwork`). |
-| `region`               | The region the subnetwork lives in.                          |
-| `ssh_tag`              | Network tag granting IAP SSH; pass into a VM's `network_tags`. |
-
-Consumed by `compute-engine` (`network_self_link` → `network`, `subnetwork_self_link` →
-`subnetwork`, `ssh_tag` → one of `network_tags`).
+| Name | Description |
+| ---- | ----------- |
+| network\_name | The VPC network name. |
+| network\_self\_link | Network self link (pass to compute-engine.network). |
+| region | Region the subnetwork lives in. |
+| ssh\_tag | Network tag that grants IAP SSH. Pass into a VM's network\_tags to let it accept SSH (e.g. network\_tags = [module.network.ssh\_tag]). |
+| subnetwork\_name | The regional subnetwork name. |
+| subnetwork\_self\_link | Subnetwork self link (pass to compute-engine.subnetwork). |
+<!-- END_TF_DOCS -->

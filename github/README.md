@@ -5,10 +5,14 @@ and the module creates/configures one repo per entry — visibility, description
 default branch, and optional branch protection. Adding or changing a repo is a single map
 edit on the consumer side; the module never changes.
 
-This is the **first component that needs a credential** (a `GITHUB_TOKEN`), so unlike `dummy`
-it cannot run on the credential-free `TG_BACKEND=local` path. Because GitHub repos are
-**org-scoped, not per-environment**, exactly one environment should own this component —
-`infra-environments-dev` is the designated owner.
+This component **needs a credential** (a `GITHUB_TOKEN`), so it cannot run on the credential-free
+`TG_BACKEND=local` path. Because GitHub repos are **org-scoped, not per-environment**, exactly one
+environment should own this component — `infra-environments-dev` is the designated owner.
+
+> **Exception to the `global` convention:** unlike every other component, `github` takes **no
+> `global` object**. Its resources are org-scoped (not environment-scoped) and `github_repository`
+> has nothing to tag, so a `global` input would be dead — and the repo's `tflint` (recommended
+> preset) flags unused declarations. See [README.md](../README.md#the-global-object).
 
 ## What it creates
 
@@ -37,17 +41,23 @@ token is stored in this module or in git.** Export it before running:
 export GITHUB_TOKEN=ghp_...
 ```
 
-## Inputs
+## Dependencies
 
-| Name                      | Type        | Default       | Description                                                        |
-| ------------------------- | ----------- | ------------- | ------------------------------------------------------------------ |
-| `global`                  | object      | —             | Env-wide context. Accepted for convention only; **unused** here.   |
-| `github_owner`            | string      | `officialdad` | The GitHub org (or user) the provider operates on.                 |
-| `default_team`            | string      | `engineers`   | Team slug granted to every repo by default; `""` disables.         |
-| `default_team_permission` | string      | `push`        | Default team's access: `pull`/`triage`/`push`/`maintain`/`admin`.  |
-| `repositories`            | map(object) | `{}`          | Repositories to manage, keyed by repo name (see shape below).      |
+None — `github` consumes no other component's outputs. It owns org-scoped GitHub resources and is
+run by a single environment (`infra-environments-dev`).
+
+## Managing repos that already exist
+
+`github_repository` **creates** repos. To bring an existing repo under management, import it first
+or Terraform will try to create a duplicate and fail:
+
+```bash
+terraform import 'github_repository.this["my-repo"]' my-repo
+```
 
 ### `repositories` entry shape
+
+The generated Inputs table renders `repositories` as one `map(object({…}))`. A full entry:
 
 ```hcl
 repositories = {
@@ -70,23 +80,21 @@ repositories = {
 }
 ```
 
+<!-- BEGIN_TF_DOCS -->
+## Inputs
+
+| Name | Description | Type | Default | Required |
+| ---- | ----------- | ---- | ------- | :------: |
+| default\_team | Team slug granted access to every managed repo by default. Empty string disables the default grant. The team must already exist in the org. | `string` | `"engineers"` | no |
+| default\_team\_permission | Permission the default team receives on each repo. | `string` | `"push"` | no |
+| github\_owner | The GitHub organization (or user) the provider operates on. | `string` | `"officialdad"` | no |
+| repositories | Repositories to manage, keyed by repo name. Each value configures one repo; omit branch\_protection to leave the default branch unprotected. | <pre>map(object({<br/>    description            = optional(string, "")<br/>    visibility             = optional(string, "private")<br/>    topics                 = optional(list(string), [])<br/>    default_branch         = optional(string, "main")<br/>    has_issues             = optional(bool, true)<br/>    delete_branch_on_merge = optional(bool, true)<br/>    branch_protection = optional(object({<br/>      required_approving_review_count = optional(number, 1)<br/>      required_status_checks          = optional(list(string), [])<br/>      enforce_admins                  = optional(bool, false)<br/>    }))<br/>  }))</pre> | `{}` | no |
+
 ## Outputs
 
-| Name               | Description                                            |
-| ------------------ | ----------------------------------------------------- |
-| `repository_names` | Map of key → full name (`owner/repo`).                |
-| `repository_urls`  | Map of key → HTML URL.                                |
-| `team_grants`      | Map of key → `"team:permission"` from `default_team`. |
-
-## Managing repos that already exist
-
-`github_repository` **creates** repos. To bring an existing repo under management, import it
-first or Terraform will try to create a duplicate and fail:
-
-```bash
-terraform import 'github_repository.this["my-repo"]' my-repo
-```
-
-## Dependencies
-
-None. It does not consume any other component's outputs.
+| Name | Description |
+| ---- | ----------- |
+| repository\_names | Map of repository key -> full name (owner/repo). |
+| repository\_urls | Map of repository key -> HTML URL. |
+| team\_grants | Map of repository key -> "team:permission" granted by the default team. |
+<!-- END_TF_DOCS -->

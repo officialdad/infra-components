@@ -19,3 +19,6 @@ override.tf.json
 .idea/
 .vscode/
 .DS_Store
+
+# Claude Code — commit team config (settings.json, hooks/, skills) but not personal overrides
+.claude/settings.local.json

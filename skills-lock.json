@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "skills": {
+    "provider-docs": {
+      "source": "hashicorp/agent-skills",
+      "sourceType": "github",
+      "skillPath": "terraform/provider-development/skills/provider-docs/SKILL.md",
+      "computedHash": "98f26d2e497e94913fe00b9544c6b5cb81325ead615aaf3ddf87d272ff882e43"
+    },
+    "provider-resources": {
+      "source": "hashicorp/agent-skills",
+      "sourceType": "github",
+      "skillPath": "terraform/provider-development/skills/provider-resources/SKILL.md",
+      "computedHash": "97edcbb115a59d93da5ec28cb445d883307c66143b6fbc1f6f61bd4b2cfd7def"
+    },
+    "provider-test-patterns": {
+      "source": "hashicorp/agent-skills",
+      "sourceType": "github",
+      "skillPath": "terraform/provider-development/skills/provider-test-patterns/SKILL.md",
+      "computedHash": "5357774c5d08fa1666737d49ffb68f0c86689be3b3620be5779fd882b159c09c"
+    },
+    "refactor-module": {
+      "source": "hashicorp/agent-skills",
+      "sourceType": "github",
+      "skillPath": "terraform/module-generation/skills/refactor-module/SKILL.md",
+      "computedHash": "f506f95f84ff344a3e522f2e58069b632a5b3539d978f00c935ee8bab25b03f0"
+    },
+    "terraform-search-import": {
+      "source": "hashicorp/agent-skills",
+      "sourceType": "github",
+      "skillPath": "terraform/code-generation/skills/terraform-search-import/SKILL.md",
+      "computedHash": "46ecb62cab3224263a6d8fb5a264a65bdb3085c762cc91eab1797d650bae6ce8"
+    },
+    "terraform-style-guide": {
+      "source": "hashicorp/agent-skills",
+      "sourceType": "github",
+      "skillPath": "terraform/code-generation/skills/terraform-style-guide/SKILL.md",
+      "computedHash": "fd301fe5bfb41764acac67c25244cc5650b5dd0a5d8d037414449a2d3adecbbf"
+    },
+    "terraform-test": {
+      "source": "hashicorp/agent-skills",
+      "sourceType": "github",
+      "skillPath": "terraform/code-generation/skills/terraform-test/SKILL.md",
+      "computedHash": "c446a090ac98bea46704c16003761a030e6aa56a27b0e95d6914fbdb7c1d2a23"
+    }
+  }
+}

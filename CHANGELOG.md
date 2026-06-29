@@ -23,6 +23,8 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-06-30
+
 > **AWS added alongside GCP — both stacks kept.** New AWS analogs `vpc` / `ec2` / `automation-roles`
 > sit beside the GCP `network` / `compute-engine`; the shared `global` + `instances`-map interface is
 > identical across the pairs (only cloud resources and field names differ). Nothing removed.
@@ -107,7 +109,8 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
     (sensitive) master password. Outputs `database_address`, `database_arn`, credentials.
   - `app-alb` — public Application Load Balancer with security group, target group, HTTP listener.
 
-[Unreleased]: https://github.com/officialdad/infra-components/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/officialdad/infra-components/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/officialdad/infra-components/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/officialdad/infra-components/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/officialdad/infra-components/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/officialdad/infra-components/compare/v0.1.0...v0.2.0

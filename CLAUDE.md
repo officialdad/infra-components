@@ -1,8 +1,8 @@
 # CLAUDE.md
 
 Guidance for working in `infra-components`. Read this before adding or changing a component.
-Authoritative human docs: **[CONVENTIONS.md](./CONVENTIONS.md)** (the contract),
-**[README.md](./README.md)** (overview), **[CHANGELOG.md](./CHANGELOG.md)** (per-version history).
+Authoritative human docs: **[README.md](./README.md)** (overview + the conventions contract) and
+**[CHANGELOG.md](./CHANGELOG.md)** (per-version history).
 When code and these docs disagree, that's a bug — fix both in the same change.
 
 ## What this repo is
@@ -51,7 +51,7 @@ These are the contract the environments repos rely on. Keep them identical acros
 - **`global` first.** Every component takes `global = { environment_name, deploy_region, tags }` as
   its first variable. **Exception: `github`** (org-scoped, nothing to tag — a dead `global` would
   trip `tflint`'s unused-declaration rule). If you add another genuinely env-less component,
-  document the exception in CONVENTIONS.md + the component README, don't add a dead variable.
+  document the exception in README.md + the component README, don't add a dead variable.
 - **Tags / labels on everything taggable.**
   - AWS: `merge(var.global.tags, { ManagedBy = "terraform", Environment = var.global.environment_name })`
     via a `common_tags` local, applied to every resource.
@@ -108,7 +108,7 @@ interface even though the tooling can't enforce it.
 - [ ] Add the component to **`.github/workflows/ci.yml`** matrix
 - [ ] Add a row to the **root README** components table
 - [ ] Add a **CHANGELOG `[Unreleased]`** entry (Added / Changed / Fixed; flag breaking loudly)
-- [ ] If a change touches inputs/outputs, update CONVENTIONS.md / READMEs in the same commit
+- [ ] If a change touches inputs/outputs, update README.md / the component README in the same commit
 
 ## Automated gate & grounding (committed, team-wide)
 
@@ -149,7 +149,7 @@ covers them).
 
 Git tags `vMAJOR.MINOR.PATCH`, consumed via `?ref=<tag>`. MAJOR = breaking input/output change.
 Move `[Unreleased]` → a dated version section, update the compare links, tag, and push branch+tag
-together. Full steps in [CONVENTIONS.md](./CONVENTIONS.md#versioning--releasing).
+together. Full steps in [README.md](./README.md#versioning--releasing).
 
 ## Guardrails
 

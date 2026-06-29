@@ -14,11 +14,21 @@ terraform {
 ```
 
 The `//<component>/terraform` part selects the subdirectory inside this repo, and `?ref=<tag>`
-pins a version. The environments repos decide which version of each component to use:
-`infra-environments-dev` tracks `main`; `infra-environments-prod` pins git tags.
+pins a version.
 
-See **[CONVENTIONS.md](./CONVENTIONS.md)** for module anatomy, naming, and the release process,
-and **[CHANGELOG.md](./CHANGELOG.md)** for what changed in each tagged version.
+This README is also the **conventions contract** for the `officialdad` IaC repos: the anatomy,
+the `global` object, naming, and release process below are shared by all three repos. See
+**[CHANGELOG.md](./CHANGELOG.md)** for what changed in each tagged version, and **[CLAUDE.md](./CLAUDE.md)**
+for how agents work in this repo (the automated quality gate, design principles, and the
+component checklist).
+
+## Repos
+
+| Repo | Role | Module ref |
+| --- | --- | --- |
+| `infra-components` | Reusable Terraform modules | tagged releases |
+| `infra-environments-dev` | Dev environment (ungated) | tracks `main` |
+| `infra-environments-prod` | Prod environment (gated) | pinned tags |
 
 ## Components
 
@@ -41,22 +51,23 @@ the network the foundation component outputs. `github` and `automation-roles` ar
 
 ## Anatomy of a component
 
-Each component's `terraform/` directory follows the same layout:
+Each component is a directory with a `terraform/` subdir:
 
 ```
-<component>/terraform/
-├── versions.tf     # required_version + required_providers
-├── variables.tf    # inputs (includes a `global` object, see below — `github` is the one exception)
-├── main.tf         # the resources
-└── outputs.tf      # values consumed by downstream components
+<component>/
+├── README.md          # inputs/outputs table, dependencies
+└── terraform/
+    ├── versions.tf    # required_version (min floor, >= 1.5.7) + required_providers (pinned ~> ranges)
+    ├── variables.tf   # inputs; first variable is always `global` (except `github`, see below)
+    ├── main.tf        # provider + resources
+    └── outputs.tf     # values consumed by downstream components
 ```
 
-### The `global` convention
+### The `global` object
 
-Every component takes a `global` object carrying environment-wide context
-(name, region, tags) — the one exception is `github`, whose resources are org-scoped, not
-environment-scoped. The environments repo passes this once via a shared `global.tfvars`,
-so individual components stay generic. Example:
+Every component takes a `global` object as its first variable, carrying environment-wide context
+(name, region, tags) so modules stay generic. The environments repo passes it once via a shared
+`global.tfvars`.
 
 ```hcl
 variable "global" {
@@ -68,11 +79,67 @@ variable "global" {
 }
 ```
 
+Use it for naming and tags: `"${var.global.environment_name}-vpc"`, and
+`merge(var.global.tags, { ... })` on every resource. On GCP, `global.tags` is sanitized into
+resource **labels** where the provider supports them (e.g. the `compute-engine` instance); GCP
+*networking* resources can't be labeled, so only naming carries through there.
+
+> **One exception:** `github` takes **no `global`**. Its resources are org-scoped, not
+> environment-scoped, and `github_repository` has nothing to tag — a `global` input would be a
+> dead declaration (which `tflint`'s recommended preset flags). Every other component takes
+> `global` as its first variable.
+
+## Naming
+
+Deterministic and readable — no random suffixes (we're single-region, two environments; we
+don't need global-uniqueness hashing).
+
+- **Resources:** `<environment_name>-<component>[-<purpose>]`
+  e.g. `dev-vpc`, `prod-app-sg`, `prod-app-alb-tg`.
+- **State buckets:** `tfstate-officialdad-<env>-<region-or-CHANGEME>` (one bucket per environment,
+  separate AWS accounts for dev vs prod).
+- **State keys:** one per component, set automatically by Terragrunt via
+  `${path_relative_to_include()}/terraform.tfstate`.
+- **Tags:** always include `Environment`, `ManagedBy = "terraform"`, plus `var.global.tags`.
+
 ## Versioning & releasing
 
-Components are versioned with **git tags** (`vMAJOR.MINOR.PATCH`), consumed via `?ref=<tag>`.
-Dev can track a branch (`?ref=main`) while iterating; prod pins a tag. The full release/promotion
-process is in [CONVENTIONS.md](./CONVENTIONS.md#versioning--releasing).
+Modules are versioned with **git tags** (`vMAJOR.MINOR.PATCH`), consumed via `?ref=<tag>`. Dev can
+track a branch (`?ref=main`) while iterating; prod pins a tag.
+
+- **MAJOR** — breaking input/output change (callers must edit their config). Call it out loudly
+  in CHANGELOG.
+- **MINOR** — new feature, backward compatible.
+- **PATCH** — bug fix, no interface change.
+
+### Releasing (manual)
+
+1. Make the module change on a branch, open a PR, merge to `main`.
+2. `infra-environments-dev` (tracks `main`) picks it up — apply and let it soak.
+3. Update [CHANGELOG.md](./CHANGELOG.md):
+   - Move `[Unreleased]` content into a new `## [X.Y.Z] - YYYY-MM-DD` section.
+   - Add a compare link at the bottom for the new version.
+   - Update the `[Unreleased]` link to `compare/vX.Y.Z...HEAD`.
+   ```
+   [Unreleased]: https://github.com/officialdad/infra-components/compare/vX.Y.Z...HEAD
+   [X.Y.Z]: https://github.com/officialdad/infra-components/compare/vPREV...vX.Y.Z
+   ```
+4. Commit the CHANGELOG update, tag, and push both in one command:
+   ```bash
+   git add CHANGELOG.md
+   git commit -m "vX.Y.Z <short description>"
+   git tag vX.Y.Z
+   git push origin main vX.Y.Z
+   ```
+   `git push origin main vX.Y.Z` pushes the branch and tag atomically — avoids
+   the tag landing on a different commit if something races, and keeps the push log clean.
+5. Promote to prod: PR in `infra-environments-prod` bumping the component's `versions.hcl`
+   (`"vOLD"` → `"vX.Y.Z"`), reviewed, then apply.
+
+## Commits
+
+Plain, imperative subject lines. Reference an issue if there is one. (We deliberately do **not**
+require conventional-commits / semantic-release — tagging is manual and deliberate.)
 
 ## Toolchain
 

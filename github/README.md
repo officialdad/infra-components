@@ -12,7 +12,7 @@ environment should own this component — `infra-environments-dev` is the design
 > **Exception to the `global` convention:** unlike every other component, `github` takes **no
 > `global` object**. Its resources are org-scoped (not environment-scoped) and `github_repository`
 > has nothing to tag, so a `global` input would be dead — and the repo's `tflint` (recommended
-> preset) flags unused declarations. See [CONVENTIONS.md](../CONVENTIONS.md#the-global-object).
+> preset) flags unused declarations. See [README.md](../README.md#the-global-object).
 
 ## What it creates
 

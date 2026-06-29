@@ -7,7 +7,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/), and this repo us
 
 **How this connects to the environments repos:** `infra-environments-dev` tracks `main`, so the
 `[Unreleased]` changes below are what dev runs. When a change has soaked in dev, cut a tag (see
-[CONVENTIONS.md](./CONVENTIONS.md#releasing)) and the version moves out of `[Unreleased]`. Prod
+[README.md](./README.md#versioning--releasing)) and the version moves out of `[Unreleased]`. Prod
 pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 
 - **Added** — new modules/features.
@@ -75,7 +75,7 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
   it was never `fmt`/`validate`/`tflint`'d.
 - **`github` docs.** Dropped a stale reference to the removed `dummy` component and a phantom
   `global` input row — `github` intentionally takes no `global` (now a documented exception in
-  CONVENTIONS).
+  the README).
 
 ## [0.4.0] - 2026-06-15
 

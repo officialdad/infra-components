@@ -122,31 +122,51 @@ track a branch (`?ref=main`) while iterating; prod pins a tag.
 - **MINOR** — new feature, backward compatible.
 - **PATCH** — bug fix, no interface change.
 
+### Release scope & pinned consumption
+
+Tags are **repo-wide**, not per-component (`vX.Y.Z`, never `vpc/vX.Y.Z`). That's deliberate: each
+component is consumed by its own pinned source, so a single monorepo tag serves every component
+independently.
+
+- **Each pin is fetched independently.** A consumer's `source = "…//vpc/terraform?ref=v0.7.0"` pulls
+  only that subtree at that tag. Components bump on their own schedule — leaving an unchanged
+  component pinned at an older tag is valid, not drift.
+- **The changelog says which components moved.** Every entry is component-scoped (`**vpc:** …`,
+  `**ec2:** …`) because it's generated from `type(scope): subject` commits with scope = the
+  component. Diffing `CHANGELOG.md` between two tags (or the `compare/vA...vB` link) tells a consumer
+  whether *their* component actually changed — and whether the pin is worth bumping.
+- **Each tag ships a GitHub Release.** The pushed tag publishes a GitHub Release (notes = the new
+  CHANGELOG section), so "latest" and its notes are machine-discoverable — a bump bot
+  (Renovate/Dependabot/custom) can open "bump to `vX.Y.Z`" PRs against it.
+
 ### Releasing
 
-Steps 3–4 (promote the CHANGELOG, commit, tag) are automated — you pick the version and confirm the
-irreversible push; the tooling does the surgery. One-time per clone: run
-[`scripts/setup-hooks.sh`](./scripts/setup-hooks.sh) to install the git hooks (Claude Code runs it on
-session start).
+Steps 3–4 (generate the CHANGELOG section, commit, tag) are automated — you pick the version and
+confirm the irreversible push; the tooling does the rest. One-time per clone: install **git-cliff**
+(see [Toolchain](#toolchain)) and run [`scripts/setup-hooks.sh`](./scripts/setup-hooks.sh) to install
+the git hooks (Claude Code runs it on session start).
 
-1. Make the module change on a branch, open a PR, merge to `main`.
+1. Make the module change on a branch, open a PR, merge to `main`. **The commit subjects are the
+   changelog** — write them `type(scope): subject` with scope = component, and flag input/output/
+   breaking changes there. CI previews the generated entries on your PR via
+   [`cliff.toml`](./cliff.toml).
 2. `infra-environments-dev` (tracks `main`) picks it up — apply and let it soak.
 3. Cut the release from `main` (after it has soaked):
-   - In Claude Code: **`/release X.Y.Z`** — previews the CHANGELOG diff, then pushes on your confirm.
+   - In Claude Code: **`/release X.Y.Z`** — previews the generated section, then pushes on your confirm.
    - By hand: **`scripts/release.sh X.Y.Z`**.
 
-   Either way [`scripts/release.sh`](./scripts/release.sh) promotes `[Unreleased]` →
-   `## [X.Y.Z] - <today>`, fixes the two compare links, and commits `chore(release): vX.Y.Z` + tags
-   `vX.Y.Z` — **locally, nothing pushed**. Review with `git show vX.Y.Z`; undo with
-   `git tag -d vX.Y.Z && git reset --hard HEAD~1`. (Keep `[Unreleased]` lean as you go — CI drafts
-   entries from commits and comments them on your PR via [`cliff.toml`](./cliff.toml); curate them in
-   so promotion is just a relocation.)
+   Either way [`scripts/release.sh`](./scripts/release.sh) **generates** the new
+   `## [X.Y.Z] - <today>` section from the unreleased Conventional Commits with git-cliff, splices it
+   under `## [Unreleased]`, fixes the two compare links, and commits `chore(release): vX.Y.Z` + tags
+   `vX.Y.Z` — **locally, nothing pushed**. No hand-curation: the commit subjects are the entries, and
+   history ≤ `v0.6.0` is frozen (only the new section is generated). Review with `git show vX.Y.Z`;
+   undo with `git tag -d vX.Y.Z && git reset --hard HEAD~1`.
 4. Publish: `git push origin main vX.Y.Z` (branch + tag atomically — avoids the tag landing on a
    different commit if something races). A **`pre-push` guard**
-   ([`scripts/check-release-tag.sh`](./scripts/check-release-tag.sh)) refuses the push unless the
-   CHANGELOG was promoted to match the tag. The pushed tag triggers
-   [`changelog.yml`](./.github/workflows/changelog.yml), which generates the **GitHub Release** notes
-   from the tagged commits — no hand-written release notes.
+   ([`scripts/check-release-tag.sh`](./scripts/check-release-tag.sh)) refuses the push unless
+   `CHANGELOG.md` has the matching `## [X.Y.Z] - <date>` section. The pushed tag triggers
+   [`changelog.yml`](./.github/workflows/changelog.yml), which publishes the **GitHub Release** from
+   the same git-cliff config — so the Release matches the CHANGELOG section. No hand-written notes.
 5. Promote to prod: PR in `infra-environments-prod` bumping the component's `versions.hcl`
    (`"vOLD"` → `"vX.Y.Z"`), reviewed, then apply.
 
@@ -173,6 +193,11 @@ version tag after a change has soaked in dev (see [Versioning & releasing](#vers
 - CI (`.github/workflows/ci.yml`) runs `terraform fmt` / `validate` / `tflint` per component — the
   matrix is derived from the filesystem (each `<component>/terraform/` dir), so new components are
   validated automatically with no list to maintain.
+- **git-cliff** (changelog generation) — `scripts/release.sh` runs it locally to generate the
+  CHANGELOG section from Conventional Commits; CI runs the same generator via
+  [`orhun/git-cliff-action`](https://github.com/orhun/git-cliff-action). Install it with
+  `cargo install git-cliff`, `brew install git-cliff`, or a prebuilt binary from the
+  [releases](https://github.com/orhun/git-cliff/releases) (tested with **2.13.1**).
 
 ## Notes
 

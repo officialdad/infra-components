@@ -1,8 +1,10 @@
 name: changelog
 
-# Draft the changelog from Conventional Commits with git-cliff (config: cliff.toml).
-#   - Pull requests: comment the draft entries so you curate them into CHANGELOG.md.
-#   - Tag push (vX.Y.Z): generate the GitHub Release notes for that tag.
+# Changelog automation with git-cliff (config: cliff.toml) — the single source for the changelog.
+#   - Pull requests: preview the next tag's changelog entries as a sticky comment (published
+#     verbatim, no curation).
+#   - Tag push (vX.Y.Z): publish the GitHub Release from that same changelog — the generator
+#     scripts/release.sh used to write CHANGELOG.md, so the Release and the file match.
 # Never auto-tags and never commits to main — tagging stays manual and deliberate.
 # (Fork PRs can't comment — GITHUB_TOKEN is read-only across forks; our PRs are branch PRs.)
 
@@ -27,7 +29,7 @@ jobs:
         with:
           fetch-depth: 0 # git-cliff needs full history + tags
 
-      - name: Draft unreleased changelog
+      - name: Preview unreleased changelog
         id: cliff
         uses: orhun/git-cliff-action@v4
         with:
@@ -46,10 +48,10 @@ jobs:
             const marker = '<!-- changelog-preview -->';
             const body = [
               marker,
-              '### 📝 Changelog preview (draft)',
-              'Generated from Conventional Commits. Curate into `CHANGELOG.md` → `## [Unreleased]` — trim noise, keep consumer-facing changes.',
+              '### 📝 Changelog preview',
+              "Generated from this branch's Conventional Commits — **this is what the next `vX.Y.Z` tag publishes verbatim** to `CHANGELOG.md` and the GitHub Release (no manual curation). Tighten an entry by tightening its commit subject; scope it to the component.",
               '',
-              draft || '_No changelog-relevant commits on this branch yet._',
+              draft || '_No changelog-worthy commits on this branch yet (only skipped types)._',
             ].join('\n');
             const { owner, repo } = context.repo;
             const issue_number = context.issue.number;

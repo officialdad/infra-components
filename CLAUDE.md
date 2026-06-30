@@ -128,7 +128,7 @@ formatting. The `/component-readme` skill writes to this spec.
 - [ ] `common_tags` (AWS) or sanitized labels (GCP) on every taggable resource
 - [ ] `required_version = ">= 1.5.7"`; bounded `~>` provider pins
 - [ ] `README.md` from `.github/component-readme-template.md`: lead sentence, **What it creates**, **Auth**, **Dependencies**, and the `<!-- BEGIN/END_TF_DOCS -->` markers — Inputs/Outputs are **generated** (`scripts/gen-docs.sh`), never hand-written. Follow [Component README style](#component-readme-style)
-- [ ] Add the component to **`.github/workflows/ci.yml`** matrix
+- [ ] CI validates it automatically — the `.github/workflows/ci.yml` matrix is **derived from the filesystem** (any `<component>/terraform/` dir), so there's no matrix list to edit; just confirm the `discover` job picks it up
 - [ ] Add a row to the **root README** components table
 - [ ] Add a **CHANGELOG `[Unreleased]`** entry (Added / Changed / Fixed; flag breaking loudly)
 - [ ] If a change touches inputs/outputs, update README.md / the component README in the same commit

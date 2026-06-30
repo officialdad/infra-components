@@ -31,6 +31,7 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 ### Changed
 - **automation-roles:** CI role may manage `iam:*Policy` scoped to `policy/<env>-*` so the pipeline can apply `iam-policy`
 - **ci:** bump `antonbabenko/pre-commit-terraform` `v1.99.0` → `v1.108.0` for upstream staged-file handling fixes ([#21](https://github.com/officialdad/infra-components/issues/21))
+- **ci:** derive the validate matrix from the filesystem (each `<component>/terraform/` dir) instead of a hand-maintained list, so a new component is validated automatically ([#21](https://github.com/officialdad/infra-components/issues/21))
 
 ### Fixed
 - **release.sh:** annotate the `vX.Y.Z` tag (`git tag -m`) so tagging no longer aborts under `tag.gpgsign`/`forceSignAnnotated` — the release commit and tag are always created together

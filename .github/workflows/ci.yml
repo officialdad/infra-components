@@ -71,3 +71,24 @@ jobs:
             README.md
             CLAUDE.md
             */README.md
+
+  # Canary for issue #21: the local pre-commit Terraform hooks once reported "(no files to check)" on a
+  # brand-new component, so its fmt/validate/tflint silently never ran on commit (false confidence). Re-run
+  # the fmt hook over the PR's changed range and fail loudly if it skips changed Terraform.
+  precommit-coverage:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.15.5
+
+      - name: install pre-commit
+        run: pipx install pre-commit
+
+      - name: assert Terraform hooks cover the PR's changed .tf
+        run: scripts/check-precommit-tf-coverage.sh "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"

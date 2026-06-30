@@ -40,6 +40,7 @@ component checklist).
 | `vpc`            | AWS    | Network foundation — wraps `terraform-aws-modules/vpc` (VPC + per-AZ subnets + NAT) | `vpc_id`, `private_subnet_ids`, `public_subnet_ids` |
 | `ec2`            | AWS    | One or more EC2 instances (`instances` map, bootstrap-agnostic) via the `ec2-instance` + `security-group` modules; SSM access, no public IP, per-instance named `ingress_rules` | `instances` (map keyed by instance key) |
 | `iam-policy`     | AWS    | Generic IAM policy factory — wraps caller-composed JSON documents into named, tagged managed policies (feeds `ec2` `iam_role_policy_arns`) | `policy_arns` (map keyed by policy key) |
+| `ebs-volume`     | AWS    | Standalone encrypted EBS data volumes (`volumes` map) in their own state — decoupled from the `ec2` instance lifecycle so data survives a compute destroy/apply | `volumes` (map keyed by volume key) |
 | `network`        | GCP    | Network foundation — custom-mode VPC + regional subnet + Cloud NAT + IAP-SSH firewall (wraps Google Cloud Foundation Toolkit) | `network_name`, `subnetwork_self_link`, `ssh_tag` |
 | `compute-engine` | GCP    | One or more Compute Engine VMs (`instances` map, bootstrap-agnostic); OS Login + IAP access, no external IP | `instances` (map keyed by instance key) |
 | `github`         | GitHub | GitHub repositories as code (repo factory)       | `repository_names`, `repository_urls`           |

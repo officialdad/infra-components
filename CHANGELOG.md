@@ -23,6 +23,8 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-06-30
+
 ### Added
 - **vpc:** `azs` output exposing the ordered AZ list the subnets sit in (`azs[i]` is the AZ of `private_subnet_ids[i]`/`public_subnet_ids[i]`) — lets an env source an AZ-locked input (e.g. `ebs-volume.availability_zone`) instead of hardcoding it or adding its own lookup ([#19](https://github.com/officialdad/infra-components/issues/19))
 - **iam-policy:** generic AWS IAM policy factory — env-authored JSON documents become named/tagged `aws_iam_policy`; outputs `policy_arns` (feeds `ec2` `iam_role_policy_arns`)
@@ -123,7 +125,8 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
     (sensitive) master password. Outputs `database_address`, `database_arn`, credentials.
   - `app-alb` — public Application Load Balancer with security group, target group, HTTP listener.
 
-[Unreleased]: https://github.com/officialdad/infra-components/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/officialdad/infra-components/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/officialdad/infra-components/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/officialdad/infra-components/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/officialdad/infra-components/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/officialdad/infra-components/compare/v0.2.0...v0.3.0

@@ -25,6 +25,7 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 
 ### Added
 - **iam-policy:** generic AWS IAM policy factory — env-authored JSON documents become named/tagged `aws_iam_policy`; outputs `policy_arns` (feeds `ec2` `iam_role_policy_arns`)
+- **ebs-volume:** standalone encrypted EBS data volumes (`volumes` map) in their own state — decoupled from the `ec2` instance lifecycle so data survives a compute destroy/apply; outputs `volumes` (instance self-attaches by `Name` tag). No `ec2` change
 
 ### Changed
 - **automation-roles:** CI role may manage `iam:*Policy` scoped to `policy/<env>-*` so the pipeline can apply `iam-policy`

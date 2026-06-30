@@ -117,6 +117,8 @@ data "aws_iam_policy_document" "permissions" {
       "iam:GetInstanceProfile",
       "iam:AddRoleToInstanceProfile",
       "iam:RemoveRoleFromInstanceProfile",
+      "iam:TagInstanceProfile",
+      "iam:UntagInstanceProfile",
       "iam:PassRole",
     ]
     resources = local.iam_scope

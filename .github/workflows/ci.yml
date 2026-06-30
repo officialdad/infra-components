@@ -20,16 +20,58 @@ jobs:
       components: ${{ steps.list.outputs.components }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - id: list
-        name: enumerate components (dirs containing terraform/)
+        name: enumerate changed components (dirs containing terraform/)
         run: |
-          components="$(find . -mindepth 2 -maxdepth 2 -type d -name terraform -not -path './.*' \
+          # Full component list — filesystem truth, same logic as before.
+          ALL="$(find . -mindepth 2 -maxdepth 2 -type d -name terraform -not -path './.*' \
             -printf '%h\n' | sed 's|^\./||' | sort | jq -R . | jq -cs .)"
-          echo "components=$components" >> "$GITHUB_OUTPUT"
-          echo "Discovered components: $components"
+
+          # Resolve diff range for PR vs push.
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+            HEAD="${{ github.sha }}"
+          fi
+
+          # Force-push, initial branch push, or unreachable base — no valid range, run all.
+          if [[ "$BASE" == "0000000000000000000000000000000000000000" ]] || \
+             ! git cat-file -t "$BASE" > /dev/null 2>&1; then
+            echo "components=$ALL" >> "$GITHUB_OUTPUT"
+            echo "No valid base SHA — running all components: $ALL"
+            exit 0
+          fi
+
+          # Any change to shared Terraform config affects every component — run all.
+          if git diff --name-only "$BASE" "$HEAD" -- \
+              .tflint.hcl .terraform-version .github/workflows/ci.yml | grep -q .; then
+            echo "components=$ALL" >> "$GITHUB_OUTPUT"
+            echo "Shared config changed — running all components: $ALL"
+            exit 0
+          fi
+
+          # Emit only the components that contain changed Terraform files.
+          COMPONENTS="$(
+            git diff --name-only "$BASE" "$HEAD" \
+              -- '*/terraform/*.tf' '*/terraform/*.tofu' '*/terraform/*.tfvars' \
+            | sed -n 's|^\([^/]*\)/terraform/.*|\1|p' \
+            | sort -u \
+            | jq -R . | jq -cs .
+          )"
+          echo "components=$COMPONENTS" >> "$GITHUB_OUTPUT"
+          if [[ "$COMPONENTS" == "[]" ]]; then
+            echo "No Terraform files changed — validate will be skipped."
+          else
+            echo "Changed components: $COMPONENTS"
+          fi
 
   validate:
     needs: discover
+    if: needs.discover.outputs.components != '[]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

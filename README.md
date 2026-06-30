@@ -170,7 +170,9 @@ version tag after a change has soaked in dev (see [Versioning & releasing](#vers
 
 - Terraform **1.15.5**, Terragrunt **1.0.7** (the environments repos pin these via
   `.terraform-version` / `.terragrunt-version`).
-- CI (`.github/workflows/ci.yml`) runs `terraform fmt` / `validate` / `tflint` per component.
+- CI (`.github/workflows/ci.yml`) runs `terraform fmt` / `validate` / `tflint` per component — the
+  matrix is derived from the filesystem (each `<component>/terraform/` dir), so new components are
+  validated automatically with no list to maintain.
 
 ## Notes
 

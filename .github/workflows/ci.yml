@@ -12,12 +12,29 @@ permissions:
   contents: read
 
 jobs:
+  # Derive the component list from the filesystem (every dir with a terraform/ subdir) so a new
+  # component is validated automatically — no hand-maintained matrix to forget (see issue #21).
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      components: ${{ steps.list.outputs.components }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: list
+        name: enumerate components (dirs containing terraform/)
+        run: |
+          components="$(find . -mindepth 2 -maxdepth 2 -type d -name terraform -not -path './.*' \
+            -printf '%h\n' | sed 's|^\./||' | sort | jq -R . | jq -cs .)"
+          echo "components=$components" >> "$GITHUB_OUTPUT"
+          echo "Discovered components: $components"
+
   validate:
+    needs: discover
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        component: [vpc, ec2, iam-policy, ebs-volume, network, compute-engine, github, automation-roles]
+        component: ${{ fromJSON(needs.discover.outputs.components) }}
     steps:
       - uses: actions/checkout@v6
 
@@ -71,3 +88,24 @@ jobs:
             README.md
             CLAUDE.md
             */README.md
+
+  # Canary for issue #21: the local pre-commit Terraform hooks once reported "(no files to check)" on a
+  # brand-new component, so its fmt/validate/tflint silently never ran on commit (false confidence). Re-run
+  # the fmt hook over the PR's changed range and fail loudly if it skips changed Terraform.
+  precommit-coverage:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.15.5
+
+      - name: install pre-commit
+        run: pipx install pre-commit
+
+      - name: assert Terraform hooks cover the PR's changed .tf
+        run: scripts/check-precommit-tf-coverage.sh "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"

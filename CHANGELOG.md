@@ -26,9 +26,12 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 ### Added
 - **iam-policy:** generic AWS IAM policy factory — env-authored JSON documents become named/tagged `aws_iam_policy`; outputs `policy_arns` (feeds `ec2` `iam_role_policy_arns`)
 - **ebs-volume:** standalone encrypted EBS data volumes (`volumes` map) in their own state — decoupled from the `ec2` instance lifecycle so data survives a compute destroy/apply; outputs `volumes` (instance self-attaches by `Name` tag). No `ec2` change
+- **ci:** `precommit-coverage` canary — a PR changing `.tf` fails loudly if the pre-commit Terraform hooks report `(no files to check)` instead of running, closing the silent local-gate gap ([#21](https://github.com/officialdad/infra-components/issues/21))
 
 ### Changed
 - **automation-roles:** CI role may manage `iam:*Policy` scoped to `policy/<env>-*` so the pipeline can apply `iam-policy`
+- **ci:** bump `antonbabenko/pre-commit-terraform` `v1.99.0` → `v1.108.0` for upstream staged-file handling fixes ([#21](https://github.com/officialdad/infra-components/issues/21))
+- **ci:** derive the validate matrix from the filesystem (each `<component>/terraform/` dir) instead of a hand-maintained list, so a new component is validated automatically ([#21](https://github.com/officialdad/infra-components/issues/21))
 
 ### Fixed
 - **release.sh:** annotate the `vX.Y.Z` tag (`git tag -m`) so tagging no longer aborts under `tag.gpgsign`/`forceSignAnnotated` — the release commit and tag are always created together

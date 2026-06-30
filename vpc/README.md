@@ -41,6 +41,8 @@ out-of-band, none stored in this component. Region comes from `var.global.deploy
 - **Upstream:** none — `vpc` is a network foundation.
 - **Consumed by `ec2`:** `vpc_id` → `vpc_id`, `vpc_cidr_block` → `vpc_cidr`,
   `private_subnet_ids[0]` → `subnet_id`.
+- **Consumed by `ebs-volume`:** `azs[0]` → an entry's `availability_zone` — the AZ-locked volume
+  must match the AZ of the subnet (`private_subnet_ids[0]`) its instance launches into.
 
 <!-- BEGIN_TF_DOCS -->
 ## Inputs
@@ -56,6 +58,7 @@ out-of-band, none stored in this component. Region comes from `var.global.deploy
 
 | Name | Description |
 | ---- | ----------- |
+| azs | Ordered AZs the subnets sit in; azs[i] is the AZ of private\_subnet\_ids[i] / public\_subnet\_ids[i]. |
 | private\_subnet\_ids | Private subnet ids (pass ec2.subnet\_id = private\_subnet\_ids[0]). |
 | public\_subnet\_ids | Public subnet ids. |
 | region | Region the VPC lives in. |

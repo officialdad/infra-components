@@ -24,6 +24,7 @@ pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
 ## [Unreleased]
 
 ### Added
+- **vpc:** `azs` output exposing the ordered AZ list the subnets sit in (`azs[i]` is the AZ of `private_subnet_ids[i]`/`public_subnet_ids[i]`) — lets an env source an AZ-locked input (e.g. `ebs-volume.availability_zone`) instead of hardcoding it or adding its own lookup ([#19](https://github.com/officialdad/infra-components/issues/19))
 - **iam-policy:** generic AWS IAM policy factory — env-authored JSON documents become named/tagged `aws_iam_policy`; outputs `policy_arns` (feeds `ec2` `iam_role_policy_arns`)
 - **ebs-volume:** standalone encrypted EBS data volumes (`volumes` map) in their own state — decoupled from the `ec2` instance lifecycle so data survives a compute destroy/apply; outputs `volumes` (instance self-attaches by `Name` tag). No `ec2` change
 - **ci:** `precommit-coverage` canary — a PR changing `.tf` fails loudly if the pre-commit Terraform hooks report `(no files to check)` instead of running, closing the silent local-gate gap ([#21](https://github.com/officialdad/infra-components/issues/21))

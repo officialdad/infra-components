@@ -1,9 +1,12 @@
-# git-cliff config — drafts the CHANGELOG from Conventional Commits.
-# Consumed by .github/workflows/changelog.yml:
-#   - PRs: the draft entries are posted as a comment to curate into CHANGELOG.md.
-#   - Tag push (vX.Y.Z): the GitHub Release notes are generated from this config.
-# We DRAFT, then curate by hand and cut the tag manually (the soak gate stays — see README
-# "Versioning & releasing"). git-cliff never owns CHANGELOG.md's narrative and never auto-tags.
+# git-cliff config — the SINGLE SOURCE of release notes, generated from Conventional Commits.
+# Consumed by both:
+#   - scripts/release.sh: generates the new `## [X.Y.Z]` section and splices it into CHANGELOG.md at
+#     release time (`git-cliff --unreleased --tag vX.Y.Z`). History ≤ v0.6.0 is frozen, not regenerated.
+#   - .github/workflows/changelog.yml: PRs preview the next tag's notes as a comment; the tag push
+#     publishes the GitHub Release from this same config — so CHANGELOG.md == the Release notes.
+# No hand-curation: the commit subjects ARE the entries (scope = component → per-component grouping).
+# The soak gate + manual tagging stay (see README "Versioning & releasing"). git-cliff never
+# auto-tags and never commits to main.
 
 [changelog]
 header = ""

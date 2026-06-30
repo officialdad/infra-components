@@ -5,21 +5,23 @@ All notable changes to the modules in this repo are recorded here.
 Format follows [Keep a Changelog](https://keepachangelog.com/), and this repo uses
 [Semantic Versioning](https://semver.org/) via git tags (`vMAJOR.MINOR.PATCH`).
 
-**Style — keep it lean:** one line per change, `**scope:** imperative summary`. The *why* and *how*
-live in the PR and commit, not here. CI drafts the `[Unreleased]` entries from Conventional Commits
-and posts them as a comment on your PR (config: [`cliff.toml`](./cliff.toml)); curate them in — trim
-noise, keep only consumer-facing changes, add a short narrative blockquote only for a big shift.
-Tagging stays manual (see [README](./README.md#versioning--releasing)).
+**Generated, not curated.** Each release section is generated from that release's Conventional
+Commits by git-cliff (config: [`cliff.toml`](./cliff.toml)) when the tag is cut — `**scope:** summary`,
+one line per change, scope = component. Shape an entry by shaping its **commit subject** (CI previews
+the generated entries on your PR); there is no `[Unreleased]` block to hand-edit. Sections at `v0.6.0`
+and older are **frozen** hand-curated history (they predate the commit gate) and are never
+regenerated. Tagging stays manual (see [README](./README.md#versioning--releasing)).
 
-**How this connects to the environments repos:** `infra-environments-dev` tracks `main`, so the
-`[Unreleased]` changes below are what dev runs. When a change has soaked in dev, cut a tag (see
-[README.md](./README.md#versioning--releasing)) and the version moves out of `[Unreleased]`. Prod
-pins that tag, so this file is the human-readable answer to "what's in v0.2.0?".
+**How this connects to the environments repos:** `infra-environments-dev` tracks `main`; `[Unreleased]`
+stays empty between releases (preview what's pending in the PR comment or the `compare/vLatest...HEAD`
+link). When a change has soaked in dev, cut a tag (see [README.md](./README.md#versioning--releasing))
+and its section is generated. Prod pins that tag, so this file is the human-readable answer to
+"what's in v0.7.0?".
 
-- **Added** — new modules/features.
-- **Changed** — changes to existing behavior (note if it affects inputs/outputs).
-- **Fixed** — bug fixes.
-- **Removed** — removed features (call out breaking changes loudly).
+- **Added** — new modules/features (`feat`).
+- **Changed** — changes to existing behavior (`refactor`/`perf`; note if it affects inputs/outputs).
+- **Fixed** — bug fixes (`fix`).
+- **Removed** — removed features (`revert`; call out breaking changes loudly).
 
 ## [Unreleased]
 

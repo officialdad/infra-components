@@ -25,5 +25,5 @@
 ## Validation
 
 - [ ] `terraform fmt` / `validate` / `tflint` pass on the changed components (the gate)
-- [ ] `CHANGELOG.md` `[Unreleased]` updated
+- [ ] Commit subjects are consumer-facing, `type(scope): subject` with scope = component (the CHANGELOG is **generated** from them at release time — preview in the PR's changelog comment)
 - [ ] Component README / root README updated if inputs or outputs changed

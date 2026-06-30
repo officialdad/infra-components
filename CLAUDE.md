@@ -130,7 +130,7 @@ formatting. The `/component-readme` skill writes to this spec.
 - [ ] `README.md` from `.github/component-readme-template.md`: lead sentence, **What it creates**, **Auth**, **Dependencies**, and the `<!-- BEGIN/END_TF_DOCS -->` markers — Inputs/Outputs are **generated** (`scripts/gen-docs.sh`), never hand-written. Follow [Component README style](#component-readme-style)
 - [ ] CI validates it automatically — the `.github/workflows/ci.yml` matrix is **derived from the filesystem** (any `<component>/terraform/` dir), so there's no matrix list to edit; just confirm the `discover` job picks it up
 - [ ] Add a row to the **root README** components table
-- [ ] Add a **CHANGELOG `[Unreleased]`** entry (Added / Changed / Fixed; flag breaking loudly)
+- [ ] Write a **consumer-facing commit subject** — `type(scope): subject`, scope = component; flag input/output/breaking (`!` / `BREAKING CHANGE:`). The CHANGELOG is **generated** from these commits at release time (no hand-edited `[Unreleased]` — `scripts/release.sh` runs git-cliff)
 - [ ] If a change touches inputs/outputs, update README.md / the component README in the same commit
 
 ## Automated gate & grounding (committed, team-wide)
@@ -183,12 +183,17 @@ by `tf-guard.sh`, so write them right. Tagging stays manual (see README releasin
 ## Releasing
 
 Git tags `vMAJOR.MINOR.PATCH`, consumed via `?ref=<tag>`. MAJOR = breaking input/output change.
-Cut releases with **`/release X.Y.Z`** (or `scripts/release.sh X.Y.Z`) — it promotes `[Unreleased]`
-→ a dated `## [X.Y.Z]` section, fixes the compare links, and commits + tags **locally** (nothing
-pushed); review, then `git push origin main vX.Y.Z`. A native **`pre-push` guard**
+Tags are **repo-wide** (not per-component); each `//<component>/terraform?ref=<tag>` pin is fetched
+independently, so an unchanged component validly stays at an older tag. Cut releases with
+**`/release X.Y.Z`** (or `scripts/release.sh X.Y.Z`) — it **generates** the `## [X.Y.Z]` section from
+the release's Conventional Commits with git-cliff (requires git-cliff locally — see README
+"Toolchain"), splices it under `## [Unreleased]`, fixes the compare links, and commits + tags
+**locally** (nothing pushed); review, then `git push origin main vX.Y.Z`. The changelog is generated,
+never hand-curated; history ≤ `v0.6.0` is frozen. A native **`pre-push` guard**
 (`scripts/check-release-tag.sh`, installed by `scripts/setup-hooks.sh`) blocks a tag push whose
-version isn't promoted in the CHANGELOG. Tagging stays manual and deliberate — never auto-released on
-merge. Full steps in [README.md](./README.md#versioning--releasing).
+`## [X.Y.Z] - <date>` section is missing from the CHANGELOG. The tag push publishes the GitHub Release
+from the same git-cliff config (so it matches the CHANGELOG). Tagging stays manual and deliberate —
+never auto-released on merge. Full steps in [README.md](./README.md#versioning--releasing).
 
 ## Guardrails
 

@@ -18,6 +18,11 @@ output "public_subnet_ids" {
   description = "Public subnet ids."
 }
 
+output "azs" {
+  value       = local.azs
+  description = "Ordered AZs the subnets sit in; azs[i] is the AZ of private_subnet_ids[i] / public_subnet_ids[i]."
+}
+
 output "region" {
   value       = var.global.deploy_region
   description = "Region the VPC lives in."

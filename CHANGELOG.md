@@ -25,6 +25,11 @@ and its section is generated. Prod pins that tag, so this file is the human-read
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-08-26
+
+### Fixed
+- **ec2:** **[breaking]** Stop tagging externally-attached EBS volumes
+
 ## [0.7.0] - 2026-08-26
 
 ### Added
@@ -135,7 +140,8 @@ and its section is generated. Prod pins that tag, so this file is the human-read
     (sensitive) master password. Outputs `database_address`, `database_arn`, credentials.
   - `app-alb` — public Application Load Balancer with security group, target group, HTTP listener.
 
-[Unreleased]: https://github.com/officialdad/infra-components/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/officialdad/infra-components/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/officialdad/infra-components/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/officialdad/infra-components/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/officialdad/infra-components/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/officialdad/infra-components/compare/v0.4.0...v0.5.0

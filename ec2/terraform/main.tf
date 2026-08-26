@@ -65,5 +65,14 @@ module "ec2" {
     encrypted = true # don't rely on the account's default-EBS-encryption setting
   }
 
+  # Hardcoded off, never a knob. The module defaults this to true, which writes
+  # volume_tags = { Name = var.name } onto EVERY volume attached to the instance
+  # — including data volumes attached out-of-band, which this component's
+  # instances have by design. That clobbers the ebs-volume module's Name tag, the
+  # sole owner of it. See infra-environments-dev#42: dev-wa-support-data was
+  # retagged dev-wa-support, so the replacement instance could not find its data
+  # volume by tag and the stack failed to boot.
+  enable_volume_tags = false
+
   tags = local.common_tags
 }

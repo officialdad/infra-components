@@ -32,6 +32,12 @@ For each entry in `instances` (keyed by a short name — that key also keys the 
   (e.g. `["prometheus-http-tcp"]` → 9090); these are reachable **from the VPC CIDR only**, never the
   internet. See "Exposing a service" below.
 
+> ⚠️ **Volume tags are not this module's.** `enable_volume_tags` is hardcoded `false`, so the
+> instance writes **no tags to any attached EBS volume** — only the instance itself is tagged.
+> The upstream module defaults it to `true`, which stamps `Name = <environment_name>-<key>` onto
+> *every* volume attached to the instance, clobbering the `Name` tag of data volumes attached
+> out-of-band. Volume tags belong to whatever creates the volume.
+
 ## Access model ("SSM Session Manager")
 
 ```text

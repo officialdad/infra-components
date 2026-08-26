@@ -45,11 +45,13 @@ component checklist).
 | `compute-engine` | GCP    | One or more Compute Engine VMs (`instances` map, bootstrap-agnostic); OS Login + IAP access, no external IP | `instances` (map keyed by instance key) |
 | `github`         | GitHub | GitHub repositories as code (repo factory)       | `repository_names`, `repository_urls`           |
 | `automation-roles` | AWS  | CI identity — GitHub Actions OIDC provider + the least-privilege IAM role the pipeline assumes (no static keys) | `role_arn`, `oidc_provider_arn` |
+| `cloudflare-tunnel` | Cloudflare | Ingress routes + proxied CNAMEs for one **existing** tunnel (the tunnel itself stays hand-made — its secret would land in state) | `dns_record_ids`, `hostnames`, `tunnel_id` |
 
 The components form two parallel dependency chains, one per cloud:
 **`vpc` → `ec2`** (AWS) and **`network` → `compute-engine`** (GCP) — in each, instances launch into
-the network the foundation component outputs. `github` and `automation-roles` are standalone
-(no network); `automation-roles` is a human-applied CI bootstrap, kept out of its own pipeline.
+the network the foundation component outputs. `github`, `automation-roles` and `cloudflare-tunnel`
+are standalone (no network); `automation-roles` is a human-applied CI bootstrap, kept out of its own
+pipeline.
 
 ## Anatomy of a component
 
@@ -60,7 +62,7 @@ Each component is a directory with a `terraform/` subdir:
 ├── README.md          # from .github/component-readme-template.md; Inputs/Outputs generated
 └── terraform/
     ├── versions.tf    # required_version (min floor, >= 1.5.7) + required_providers (pinned ~> ranges)
-    ├── variables.tf   # inputs; first variable is always `global` (except `github`, see below)
+    ├── variables.tf   # inputs; first variable is always `global` (except `github` and `cloudflare-tunnel`, see below)
     ├── main.tf        # provider + resources
     └── outputs.tf     # values consumed by downstream components
 ```
@@ -94,10 +96,11 @@ Use it for naming and tags: `"${var.global.environment_name}-vpc"`, and
 resource **labels** where the provider supports them (e.g. the `compute-engine` instance); GCP
 *networking* resources can't be labeled, so only naming carries through there.
 
-> **One exception:** `github` takes **no `global`**. Its resources are org-scoped, not
-> environment-scoped, and `github_repository` has nothing to tag — a `global` input would be a
-> dead declaration (which `tflint`'s recommended preset flags). Every other component takes
-> `global` as its first variable.
+> **Two exceptions:** `github` and `cloudflare-tunnel` take **no `global`**. Their resources are
+> org- / account- and zone-scoped, not environment-scoped, and neither `github_repository` nor a
+> Cloudflare tunnel config or DNS record has anything to tag — a `global` input would be a dead
+> declaration (which `tflint`'s recommended preset flags). Every other component takes `global` as
+> its first variable.
 
 ## Naming
 

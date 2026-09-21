@@ -41,6 +41,7 @@ component checklist).
 | `ec2`            | AWS    | One or more EC2 instances (`instances` map, bootstrap-agnostic) via the `ec2-instance` + `security-group` modules; SSM access, no public IP, per-instance named `ingress_rules` | `instances` (map keyed by instance key) |
 | `iam-policy`     | AWS    | Generic IAM policy factory — wraps caller-composed JSON documents into named, tagged managed policies (feeds `ec2` `iam_role_policy_arns`) | `policy_arns` (map keyed by policy key) |
 | `ebs-volume`     | AWS    | Standalone encrypted EBS data volumes (`volumes` map) in their own state — decoupled from the `ec2` instance lifecycle so data survives a compute destroy/apply | `volumes` (map keyed by volume key) |
+| `s3-bucket`      | AWS    | Private S3 buckets (`buckets` map) — public access blocked on all four settings, ACLs disabled, SSE always on, versioning on by default, lifecycle rules driven by inputs | `buckets` (map keyed by bucket key) |
 | `network`        | GCP    | Network foundation — custom-mode VPC + regional subnet + Cloud NAT + IAP-SSH firewall (wraps Google Cloud Foundation Toolkit) | `network_name`, `subnetwork_self_link`, `ssh_tag` |
 | `compute-engine` | GCP    | One or more Compute Engine VMs (`instances` map, bootstrap-agnostic); OS Login + IAP access, no external IP | `instances` (map keyed by instance key) |
 | `github`         | GitHub | GitHub repositories as code (repo factory)       | `repository_names`, `repository_urls`           |
@@ -49,9 +50,9 @@ component checklist).
 
 The components form two parallel dependency chains, one per cloud:
 **`vpc` → `ec2`** (AWS) and **`network` → `compute-engine`** (GCP) — in each, instances launch into
-the network the foundation component outputs. `github`, `automation-roles` and `cloudflare-tunnel`
-are standalone (no network); `automation-roles` is a human-applied CI bootstrap, kept out of its own
-pipeline.
+the network the foundation component outputs. `github`, `automation-roles`, `cloudflare-tunnel`,
+`ebs-volume`, `iam-policy` and `s3-bucket` are standalone (no network); `automation-roles` is a
+human-applied CI bootstrap, kept out of its own pipeline.
 
 ## Anatomy of a component
 

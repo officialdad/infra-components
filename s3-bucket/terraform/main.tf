@@ -16,6 +16,8 @@ locals {
   lifecycle_buckets = { for k, b in var.buckets : k => b if length(b.lifecycle_rules) > 0 }
 
   tls_buckets = { for k, b in var.buckets : k => b if b.enforce_tls }
+
+  object_lock_buckets = { for k, b in var.buckets : k => b if b.object_lock_default_retention != null }
 }
 
 # One bucket per entry. Name is deterministic (no suffix) unless the caller overrides it, which
@@ -25,6 +27,10 @@ resource "aws_s3_bucket" "this" {
 
   bucket        = local.bucket_names[each.key]
   force_destroy = each.value.force_destroy
+
+  # Creation-time only — S3 cannot retrofit Object Lock onto an existing bucket, so flipping this
+  # later replaces the bucket and every object in it.
+  object_lock_enabled = each.value.object_lock_enabled
 
   tags = merge(local.common_tags, {
     Name = local.bucket_names[each.key]
@@ -133,6 +139,23 @@ resource "aws_s3_bucket_lifecycle_configuration" "this" {
   }
 
   # Versioning decides whether an expiration writes a delete marker or removes the object outright.
+  depends_on = [aws_s3_bucket_versioning.this]
+}
+
+# WORM retention. Inside the window, no principal and no lifecycle rule can remove a version —
+# GOVERNANCE lets a caller holding s3:BypassGovernanceRetention override it, COMPLIANCE lets nobody.
+resource "aws_s3_bucket_object_lock_configuration" "this" {
+  for_each = local.object_lock_buckets
+
+  bucket = aws_s3_bucket.this[each.key].id
+
+  rule {
+    default_retention {
+      mode = each.value.object_lock_default_retention.mode
+      days = each.value.object_lock_default_retention.days
+    }
+  }
+
   depends_on = [aws_s3_bucket_versioning.this]
 }
 

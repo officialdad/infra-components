@@ -14,6 +14,13 @@ variable "buckets" {
     kms_key_arn   = optional(string)
     enforce_tls   = optional(bool, true)
     force_destroy = optional(bool, false)
+
+    object_lock_enabled = optional(bool, false)
+    object_lock_default_retention = optional(object({
+      mode = string
+      days = number
+    }))
+
     lifecycle_rules = optional(map(object({
       prefix                                 = optional(string, "")
       enabled                                = optional(bool, true)
@@ -67,5 +74,23 @@ variable "buckets" {
       length(distinct([for r in values(b.lifecycle_rules) : r.prefix])) == length(b.lifecycle_rules)
     ])
     error_message = "Two lifecycle rules in one bucket cannot share a prefix — S3 answers InvalidRequest \"Found two rules with same prefix\". Merge them into one rule."
+  }
+
+  validation {
+    condition     = alltrue([for b in values(var.buckets) : b.object_lock_enabled ? b.versioning : true])
+    error_message = "object_lock_enabled requires versioning — S3 refuses Object Lock on a bucket without it."
+  }
+
+  validation {
+    condition     = alltrue([for b in values(var.buckets) : b.object_lock_default_retention == null ? true : b.object_lock_enabled])
+    error_message = "object_lock_default_retention needs object_lock_enabled = true on the same entry."
+  }
+
+  validation {
+    condition = alltrue([
+      for b in values(var.buckets) :
+      b.object_lock_default_retention == null ? true : contains(["GOVERNANCE", "COMPLIANCE"], b.object_lock_default_retention.mode)
+    ])
+    error_message = "object_lock_default_retention.mode must be GOVERNANCE or COMPLIANCE."
   }
 }

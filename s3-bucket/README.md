@@ -17,6 +17,8 @@ at rest always on, and versioning on unless the caller turns it off.
 - **`aws_s3_bucket_versioning`** — `Enabled` by default, `Suspended` when `versioning = false`.
 - **`aws_s3_bucket_lifecycle_configuration`** — one rule per `lifecycle_rules` entry, keyed by rule
   id. Created only for entries that declare rules.
+- **`aws_s3_bucket_object_lock_configuration`** — WORM default retention, only for an entry that
+  sets `object_lock_default_retention`. Off by default.
 - **`aws_s3_bucket_policy`** — a single `Deny` on `aws:SecureTransport = false`, refusing plaintext
   HTTP. On by default, off with `enforce_tls = false`.
 
@@ -33,6 +35,15 @@ at rest always on, and versioning on unless the caller turns it off.
 > ⚠️ **One prefix, one rule** — S3 answers `InvalidRequest: Found two rules with same prefix` when a
 > configuration carries two rules over the same prefix. A `validation` block rejects that at plan
 > time. Put every action for a prefix in one rule.
+>
+> ⚠️ **Object Lock is decided once, at creation** — S3 cannot add it to a bucket that already
+> exists. Turning `object_lock_enabled` on later replaces the bucket and loses every object in it.
+> Decide before the first apply.
+>
+> ⚠️ **Object Lock outranks the lifecycle rule** — a version under retention cannot be removed by
+> anyone, the lifecycle included, until the window closes. Set
+> `object_lock_default_retention.days` **below** `expiration_days + noncurrent_version_expiration_days`
+> or objects outlive the retention you promised.
 >
 > ⚠️ **`force_destroy = true` deletes every object and version** on a `terraform destroy`. Default
 > `false`. The hard guard is the env's Terragrunt `prevent_destroy`.
@@ -74,7 +85,21 @@ The generated Inputs table renders `buckets` as one `map(object({…}))`. Per-fi
 - `enforce_tls` (`true`) — attaches the `DenyInsecureTransport` bucket policy. Turn it off only for a
   client that genuinely cannot speak HTTPS.
 - `force_destroy` (`false`) — when true, `terraform destroy` empties the bucket first. Opt-in.
+- `object_lock_enabled` (`false`) — creation-time only, and requires `versioning`. On its own it
+  only makes the bucket capable of holding locks; nothing is locked until a retention is set.
+- `object_lock_default_retention` (unset) — `{ mode, days }` applied to every new version.
+  `GOVERNANCE` lets a caller holding `s3:BypassGovernanceRetention` override it; `COMPLIANCE` lets
+  nobody, including the root account. Needs `object_lock_enabled = true`.
 - `lifecycle_rules` (`{}`) — rules keyed by rule id, which becomes the S3 rule `ID`.
+
+### Overwrite is a write, and a write is not a delete
+
+A principal holding only `s3:PutObject` on a prefix can still replace an object under it. Versioning
+turns that into a new version rather than a loss — the previous bytes become noncurrent and survive
+until `noncurrent_version_expiration_days` elapses. **That number is the window in which a bad or
+malicious overwrite is still recoverable.** A short one (1 day) makes write-only access nearly as
+destructive as delete access. Size it against how long detection takes, not against storage cost.
+`object_lock_default_retention` is the hard version of the same guarantee.
 
 ### `lifecycle_rules` entry shape
 
@@ -99,7 +124,7 @@ The generated Inputs table renders `buckets` as one `map(object({…}))`. Per-fi
 | Name | Description | Type | Default | Required |
 | ---- | ----------- | ---- | ------- | :------: |
 | global | Environment-wide context injected by the environments repo (name, region, tags). | <pre>object({<br/>    environment_name = string<br/>    deploy_region    = string<br/>    tags             = map(string)<br/>  })</pre> | n/a | yes |
-| buckets | S3 buckets keyed by short name; each entry overrides only what it needs. Bucket name = "<environment\_name>-<key>" unless bucket\_name is set (S3 names are globally unique, so a taken name needs the override). Public access is blocked on all four settings, ACLs are disabled, and SSE is always on — none of those are inputs. versioning defaults true. kms\_key\_arn unset means SSE-S3 (AES256); set it for SSE-KMS. lifecycle\_rules is keyed by rule id and each rule needs its own prefix (S3 rejects two rules sharing one). On a versioned bucket an object's total lifetime is expiration\_days + noncurrent\_version\_expiration\_days, so size both against any retention promise. | <pre>map(object({<br/>    bucket_name   = optional(string)<br/>    versioning    = optional(bool, true)<br/>    kms_key_arn   = optional(string)<br/>    enforce_tls   = optional(bool, true)<br/>    force_destroy = optional(bool, false)<br/>    lifecycle_rules = optional(map(object({<br/>      prefix                                 = optional(string, "")<br/>      enabled                                = optional(bool, true)<br/>      expiration_days                        = optional(number)<br/>      noncurrent_version_expiration_days     = optional(number)<br/>      noncurrent_versions_to_keep            = optional(number)<br/>      abort_incomplete_multipart_upload_days = optional(number)<br/>      expired_object_delete_marker           = optional(bool, false)<br/>    })), {})<br/>  }))</pre> | `{}` | no |
+| buckets | S3 buckets keyed by short name; each entry overrides only what it needs. Bucket name = "<environment\_name>-<key>" unless bucket\_name is set (S3 names are globally unique, so a taken name needs the override). Public access is blocked on all four settings, ACLs are disabled, and SSE is always on — none of those are inputs. versioning defaults true. kms\_key\_arn unset means SSE-S3 (AES256); set it for SSE-KMS. lifecycle\_rules is keyed by rule id and each rule needs its own prefix (S3 rejects two rules sharing one). On a versioned bucket an object's total lifetime is expiration\_days + noncurrent\_version\_expiration\_days, so size both against any retention promise. | <pre>map(object({<br/>    bucket_name   = optional(string)<br/>    versioning    = optional(bool, true)<br/>    kms_key_arn   = optional(string)<br/>    enforce_tls   = optional(bool, true)<br/>    force_destroy = optional(bool, false)<br/><br/>    object_lock_enabled = optional(bool, false)<br/>    object_lock_default_retention = optional(object({<br/>      mode = string<br/>      days = number<br/>    }))<br/><br/>    lifecycle_rules = optional(map(object({<br/>      prefix                                 = optional(string, "")<br/>      enabled                                = optional(bool, true)<br/>      expiration_days                        = optional(number)<br/>      noncurrent_version_expiration_days     = optional(number)<br/>      noncurrent_versions_to_keep            = optional(number)<br/>      abort_incomplete_multipart_upload_days = optional(number)<br/>      expired_object_delete_marker           = optional(bool, false)<br/>    })), {})<br/>  }))</pre> | `{}` | no |
 
 ## Outputs
 

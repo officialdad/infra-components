@@ -53,3 +53,14 @@ variable "additional_policy_arns" {
   description = "Extra managed policy ARNs to attach to the role, on top of the built-in least-privilege policy. Keep this empty unless a unit genuinely needs more than vpc+ec2 require."
   default     = []
 }
+
+variable "additional_regions" {
+  type        = list(string)
+  description = "Extra AWS regions the CI role may act on EC2 in, on top of global.deploy_region. For an environment whose components deploy to more than one region (e.g. dev's *_my units in ap-southeast-5). Empty = deploy_region only."
+  default     = []
+
+  validation {
+    condition     = alltrue([for r in var.additional_regions : can(regex("^[a-z]{2}(-[a-z]+)+-[0-9]+$", r))])
+    error_message = "Each additional_regions entry must be an AWS region code, e.g. \"ap-southeast-5\"."
+  }
+}

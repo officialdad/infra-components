@@ -26,6 +26,10 @@ trust policy, and a least-privilege permissions policy.
   IAM scoped to `<env>-*` roles/instance-profiles (for the `ec2` module's instance profile, incl.
   `PassRole`), and SSM read for public AMI parameters. No `AdministratorAccess`. Tighten iteratively
   from plan errors.
+  > ⚠️ **EC2 is region-bound.** `ec2:*` carries an `aws:RequestedRegion` condition of
+  > `deploy_region` plus `additional_regions`. A unit that overrides `global.deploy_region` to
+  > another region fails CI plan with `UnauthorizedOperation` on `ec2:Describe*` until that region
+  > is listed in `additional_regions` and this component is re-applied.
 
 ## Auth
 
@@ -47,6 +51,7 @@ applier needs IAM-admin-ish credentials out-of-band — none are stored here. Re
 | ---- | ----------- | ---- | ------- | :------: |
 | global | Environment-wide context injected by the environments repo (name, region, tags). | <pre>object({<br/>    environment_name = string<br/>    deploy_region    = string<br/>    tags             = map(string)<br/>  })</pre> | n/a | yes |
 | additional\_policy\_arns | Extra managed policy ARNs to attach to the role, on top of the built-in least-privilege policy. Keep this empty unless a unit genuinely needs more than vpc+ec2 require. | `list(string)` | `[]` | no |
+| additional\_regions | Extra AWS regions the CI role may act on EC2 in, on top of global.deploy\_region. For an environment whose components deploy to more than one region (e.g. dev's *\_my units in ap-southeast-5). Empty = deploy\_region only. | `list(string)` | `[]` | no |
 | allowed\_subjects | OIDC `sub` claims allowed to assume the role (StringLike). Empty = the recommended ref/event-scoped default: the repo's main branch (apply) + pull\_request events (plan). Override to tighten or loosen, e.g. ["repo:org/repo:*"] for any ref. Never use a bare org/* wildcard. | `list(string)` | `[]` | no |
 | create\_oidc\_provider | Create the account-global GitHub OIDC provider. Set false if the account already federates GitHub (token.actions.githubusercontent.com) and pass existing\_oidc\_provider\_arn instead. | `bool` | `true` | no |
 | existing\_oidc\_provider\_arn | ARN of a pre-existing GitHub OIDC provider. Used (and required) only when create\_oidc\_provider = false. | `string` | `""` | no |

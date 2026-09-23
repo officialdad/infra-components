@@ -82,7 +82,7 @@ data "aws_iam_policy_document" "permissions" {
   # VPC + EC2. EC2 actions almost all require Resource = "*" (no resource-level scoping), so
   # enumerating verbs is churn without real isolation — the privilege-escalation surface is IAM,
   # which stays scoped below. Bound instead by region: the role can only act on EC2 in this env's
-  # deploy_region.
+  # deploy_region, plus any additional_regions it spans.
   statement {
     sid       = "VpcAndEc2"
     effect    = "Allow"
@@ -92,7 +92,7 @@ data "aws_iam_policy_document" "permissions" {
     condition {
       test     = "StringEquals"
       variable = "aws:RequestedRegion"
-      values   = [var.global.deploy_region]
+      values   = distinct(concat([var.global.deploy_region], var.additional_regions))
     }
   }
 

@@ -16,7 +16,7 @@ terraform { source = "git::https://github.com/officialdad/infra-components.git//
 ```
 
 - `infra-environments-dev` tracks `main`; `infra-environments-prod` pins `vX.Y.Z` tags.
-- Nothing is **applied** here. CI only `fmt` / `validate` / `tflint`s each component with the
+- Nothing is **applied** here. CI only `fmt` / `validate` / `test` / `tflint`s each component with the
   backend disabled and **no cloud credentials**. Keep every component greenfield-plannable (no live
   data-source lookups that require real infra to exist — pass values through inputs instead; see how
   `ec2` takes `vpc_cidr` as an input rather than an `aws_vpc` lookup).

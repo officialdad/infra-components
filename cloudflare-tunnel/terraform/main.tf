@@ -75,9 +75,11 @@ resource "cloudflare_zero_trust_access_application" "this" {
   # Cloudflare only accepts the redirect when exactly one identity provider is allowed.
   auto_redirect_to_identity = length(coalesce(each.value.allowed_idps, [])) == 1 ? true : null
 
+  # The module-built policy is chosen from known inputs. Filtering on the planned policy object
+  # makes the list length unknown at plan time, and the provider rejects an unknown policies list.
   policies = [
     for i, id in concat(
-      [for p in [try(cloudflare_zero_trust_access_policy.this[each.key], null)] : p.id if p != null],
+      contains(keys(local.access_policy_by_hostname), each.key) ? [cloudflare_zero_trust_access_policy.this[each.key].id] : [],
       each.value.policy_ids,
     ) : { id = id, precedence = i + 1 }
   ]

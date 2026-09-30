@@ -93,6 +93,13 @@ jobs:
       - name: terraform validate
         run: terraform -chdir=${{ matrix.component }}/terraform validate
 
+      # Components with a tests/ directory carry mocked-provider tests (no credentials needed).
+      - name: terraform test
+        run: |
+          if compgen -G "${{ matrix.component }}/terraform/tests/*.tftest.hcl" > /dev/null; then
+            terraform -chdir=${{ matrix.component }}/terraform test
+          fi
+
       - uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest

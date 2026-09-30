@@ -96,6 +96,22 @@ data "aws_iam_policy_document" "permissions" {
     }
   }
 
+  # DLM: the ebs-volume component's optional snapshot support creates a lifecycle policy. Same
+  # region bound as VpcAndEc2. DLM policies have no resource-level scoping worth enumerating verbs
+  # for; the role DLM assumes is covered by the scoped IAM statements below (<env>-* roles).
+  statement {
+    sid       = "Dlm"
+    effect    = "Allow"
+    actions   = ["dlm:*"]
+    resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values   = distinct(concat([var.global.deploy_region], var.additional_regions))
+    }
+  }
+
   # IAM: the ec2 module's create_iam_instance_profile builds an instance role + profile and attaches
   # AmazonSSMManagedInstanceCore. Scoped to <env>-* roles/profiles in this account; PassRole too.
   statement {

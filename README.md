@@ -45,7 +45,7 @@ component checklist).
 | `compute-engine` | GCP    | One or more Compute Engine VMs (`instances` map, bootstrap-agnostic); OS Login + IAP access, no external IP | `instances` (map keyed by instance key) |
 | `github`         | GitHub | GitHub repositories as code (repo factory)       | `repository_names`, `repository_urls`           |
 | `automation-roles` | AWS  | CI identity — GitHub Actions OIDC provider + the least-privilege IAM role the pipeline assumes (no static keys) | `role_arn`, `oidc_provider_arn` |
-| `cloudflare-tunnel` | Cloudflare | Ingress routes + proxied CNAMEs for one **existing** tunnel (the tunnel itself stays hand-made — its secret would land in state) | `dns_record_ids`, `hostnames`, `tunnel_id` |
+| `cloudflare-tunnel` | Cloudflare | Ingress routes + proxied CNAMEs for one **existing** tunnel, with optional per-route Cloudflare Access (app + allow policy + JWT check). The tunnel itself stays hand-made — its secret would land in state | `dns_record_ids`, `hostnames`, `tunnel_id`, `access_application_ids`, `access_aud_tags` |
 
 The components form two parallel dependency chains, one per cloud:
 **`vpc` → `ec2`** (AWS) and **`network` → `compute-engine`** (GCP) — in each, instances launch into

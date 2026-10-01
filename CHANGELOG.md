@@ -25,6 +25,13 @@ and its section is generated. Prod pins that tag, so this file is the human-read
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-01
+
+### Added
+- **cloudflare-tunnel:** Manage the Access app and allow policy per route (#34) (#34)
+- **ebs-volume:** Add opt-in daily DLM snapshots per volume (#33) (#33)
+- **automation-roles:** Allow EC2 in additional_regions beyond deploy_region
+
 ## [0.8.0] - 2026-08-26
 
 ### Fixed
@@ -140,7 +147,8 @@ and its section is generated. Prod pins that tag, so this file is the human-read
     (sensitive) master password. Outputs `database_address`, `database_arn`, credentials.
   - `app-alb` — public Application Load Balancer with security group, target group, HTTP listener.
 
-[Unreleased]: https://github.com/officialdad/infra-components/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/officialdad/infra-components/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/officialdad/infra-components/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/officialdad/infra-components/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/officialdad/infra-components/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/officialdad/infra-components/compare/v0.5.0...v0.6.0

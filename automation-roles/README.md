@@ -22,20 +22,32 @@ trust policy, and a least-privilege permissions policy.
   (the repo's `main` branch for apply + `pull_request` events for plan) — *not* a bare repo `:*`
   wildcard. Override `allowed_subjects` to change.
 - An **`aws_iam_policy`** (least-privilege, first pass) attached to the role, granting only what
-  `vpc` + `ec2` + `ebs-volume` need: EC2/VPC (subnets, route tables, IGW, NAT, EIP, security
-  groups, instances, volumes), IAM scoped to `<env>-*` roles/instance-profiles (for the `ec2`
-  module's instance profile and the `ebs-volume` DLM role, incl. `PassRole`), `dlm:*` (for
-  `ebs-volume` snapshot policies), and SSM read for public AMI parameters. No
-  `AdministratorAccess`. Tighten iteratively from plan errors.
-  > ⚠️ **EC2 and DLM are region-bound.** `ec2:*` and `dlm:*` carry an `aws:RequestedRegion`
-  > condition of `deploy_region` plus `additional_regions`. A unit that overrides
-  > `global.deploy_region` to another region fails CI plan with `UnauthorizedOperation` on
-  > `ec2:Describe*` until that region is listed in `additional_regions` and this component is
-  > re-applied.
+  `vpc` + `ec2` + `ebs-volume` + `s3-bucket` + `cloudwatch-alarms` need: EC2/VPC (subnets, route
+  tables, IGW, NAT, EIP, security groups, instances, volumes), IAM scoped to `<env>-*`
+  roles/instance-profiles (for the `ec2` module's instance profile and the `ebs-volume` DLM role,
+  incl. `PassRole`), `dlm:*` (for `ebs-volume` snapshot policies), `s3:*` on `<env>-*` buckets,
+  CloudWatch alarm actions on `<env>-*` alarms, `sns:*` on `<env>-*` topics, and SSM read for
+  public AMI parameters. No `AdministratorAccess`. Tighten iteratively from plan errors.
+  > ⚠️ **EC2, DLM, CloudWatch and SNS are region-bound.** `ec2:*`, `dlm:*`, the alarm actions and
+  > `sns:*` carry an `aws:RequestedRegion` condition of `deploy_region` plus `additional_regions`.
+  > A unit that overrides `global.deploy_region` to another region fails CI plan with
+  > `UnauthorizedOperation` on `ec2:Describe*` until that region is listed in `additional_regions`
+  > and this component is re-applied. S3 is scoped by bucket name only, with no region condition.
+  > An `s3-bucket` `bucket_name` override must keep the `<env>-` prefix. Otherwise the plan passes,
+  > then the labelled apply fails on `s3:CreateBucket` with `AccessDenied`.
   >
-  > ⚠️ **Re-apply by hand before the first `snapshot`.** An existing CI role has no `dlm:*` until
-  > this component is re-applied. Without it, `ebs-volume` plans green, then its apply creates the
-  > DLM IAM role and fails on the DLM policy.
+  > ⚠️ **An alarm with an EC2 action needs a service-linked role the CI role cannot create.** An
+  > EC2 action such as `ec2:recover` needs `AWSServiceRoleForCloudWatchEvents`. The CI role has no
+  > `iam:CreateServiceLinkedRole`. The owner creates the role by hand once per account, before the
+  > first labelled `cloudwatch-alarms` apply:
+  > `aws iam create-service-linked-role --aws-service-name events.amazonaws.com`. Skip it where the
+  > role already exists: the command then fails with `InvalidInput` and changes nothing.
+  >
+  > ⚠️ **Re-apply by hand before the first `snapshot`, `s3-bucket` or `cloudwatch-alarms`.** An
+  > existing CI role has no `dlm:*`, `s3:*`, alarm or `sns:*` permissions until this component is
+  > re-applied. Without them the plan passes, then the labelled apply fails: `ebs-volume` creates
+  > the DLM IAM role and fails on the DLM policy, and the S3, alarm and SNS resources fail with
+  > `AccessDenied`.
 
 ## Auth
 
@@ -48,7 +60,7 @@ applier needs IAM-admin-ish credentials out-of-band — none are stored here. Re
 - **Upstream:** none — bootstraps the AWS CI identity from raw IAM (no module, no component inputs).
 - **Consumed by `infra-environments-dev`:** `role_arn` → the `AWS_ROLE_ARN` secret, used by
   `aws-actions/configure-aws-credentials@v6` (with `permissions: id-token: write`) so the pipeline
-  assumes this role for `vpc` / `ec2` plan + apply.
+  assumes this role for plan + apply of the components the policy above covers.
 
 <!-- BEGIN_TF_DOCS -->
 ## Inputs

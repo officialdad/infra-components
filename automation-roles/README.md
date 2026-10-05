@@ -33,6 +33,15 @@ trust policy, and a least-privilege permissions policy.
   > A unit that overrides `global.deploy_region` to another region fails CI plan with
   > `UnauthorizedOperation` on `ec2:Describe*` until that region is listed in `additional_regions`
   > and this component is re-applied. S3 is scoped by bucket name only, with no region condition.
+  > An `s3-bucket` `bucket_name` override must keep the `<env>-` prefix. Otherwise the plan passes,
+  > then the labelled apply fails on `s3:CreateBucket` with `AccessDenied`.
+  >
+  > ⚠️ **An alarm with an EC2 action needs a service-linked role the CI role cannot create.** An
+  > EC2 action such as `ec2:recover` needs `AWSServiceRoleForCloudWatchEvents`. The CI role has no
+  > `iam:CreateServiceLinkedRole`. The owner creates the role by hand once per account, before the
+  > first labelled `cloudwatch-alarms` apply:
+  > `aws iam create-service-linked-role --aws-service-name events.amazonaws.com`. Skip it where the
+  > role already exists: the command then fails with `InvalidInput` and changes nothing.
   >
   > ⚠️ **Re-apply by hand before the first `snapshot`, `s3-bucket` or `cloudwatch-alarms`.** An
   > existing CI role has no `dlm:*`, `s3:*`, alarm or `sns:*` permissions until this component is

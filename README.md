@@ -40,13 +40,14 @@ component checklist).
 | `vpc`            | AWS    | Network foundation — wraps `terraform-aws-modules/vpc` (VPC + per-AZ subnets + NAT) | `vpc_id`, `private_subnet_ids`, `public_subnet_ids` |
 | `ec2`            | AWS    | One or more EC2 instances (`instances` map, bootstrap-agnostic) via the `ec2-instance` + `security-group` modules; SSM access, no public IP, per-instance named `ingress_rules` | `instances` (map keyed by instance key) |
 | `iam-policy`     | AWS    | Generic IAM policy factory — wraps caller-composed JSON documents into named, tagged managed policies (feeds `ec2` `iam_role_policy_arns`) | `policy_arns` (map keyed by policy key) |
-| `ebs-volume`     | AWS    | Standalone encrypted EBS data volumes (`volumes` map) in their own state — decoupled from the `ec2` instance lifecycle so data survives a compute destroy/apply | `volumes` (map keyed by volume key) |
+| `ebs-volume`     | AWS    | Standalone encrypted EBS data volumes (`volumes` map) in their own state — decoupled from the `ec2` instance lifecycle so data survives a compute destroy/apply | `volumes` (map keyed by volume key; optional `snapshot` per entry) |
 | `s3-bucket`      | AWS    | Private S3 buckets (`buckets` map) — public access blocked on all four settings, ACLs disabled, SSE always on, versioning on by default, lifecycle rules driven by inputs | `buckets` (map keyed by bucket key) |
+| `cloudwatch-alarms` | AWS  | EC2 status-check alarms (system check runs `ec2:recover`) plus opt-in disk-used and backup-age alarms on custom metrics, all notifying one SNS topic with email subscriptions | `topic_arn`, `alarm_names` |
 | `network`        | GCP    | Network foundation — custom-mode VPC + regional subnet + Cloud NAT + IAP-SSH firewall (wraps Google Cloud Foundation Toolkit) | `network_name`, `subnetwork_self_link`, `ssh_tag` |
 | `compute-engine` | GCP    | One or more Compute Engine VMs (`instances` map, bootstrap-agnostic); OS Login + IAP access, no external IP | `instances` (map keyed by instance key) |
 | `github`         | GitHub | GitHub repositories as code (repo factory)       | `repository_names`, `repository_urls`           |
 | `automation-roles` | AWS  | CI identity — GitHub Actions OIDC provider + the least-privilege IAM role the pipeline assumes (no static keys) | `role_arn`, `oidc_provider_arn` |
-| `cloudflare-tunnel` | Cloudflare | Ingress routes + proxied CNAMEs for one **existing** tunnel (the tunnel itself stays hand-made — its secret would land in state) | `dns_record_ids`, `hostnames`, `tunnel_id` |
+| `cloudflare-tunnel` | Cloudflare | Ingress routes + proxied CNAMEs for one **existing** tunnel, with optional per-route Cloudflare Access (app + allow policy + JWT check). The tunnel itself stays hand-made — its secret would land in state | `dns_record_ids`, `hostnames`, `tunnel_id`, `access_application_ids`, `access_aud_tags` |
 
 The components form two parallel dependency chains, one per cloud:
 **`vpc` → `ec2`** (AWS) and **`network` → `compute-engine`** (GCP) — in each, instances launch into
@@ -194,7 +195,8 @@ version tag after a change has soaked in dev (see [Versioning & releasing](#vers
 
 - Terraform **1.15.5**, Terragrunt **1.0.7** (the environments repos pin these via
   `.terraform-version` / `.terragrunt-version`).
-- CI (`.github/workflows/ci.yml`) runs `terraform fmt` / `validate` / `tflint` per component — the
+- CI (`.github/workflows/ci.yml`) runs `terraform fmt` / `validate` / `test` (when the component has
+  `terraform/tests/*.tftest.hcl`, mocked providers) / `tflint` per component — the
   matrix is derived from the filesystem (each `<component>/terraform/` dir), so new components are
   validated automatically with no list to maintain.
 - **git-cliff** (changelog generation) — `scripts/release.sh` runs it locally to generate the

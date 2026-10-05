@@ -60,7 +60,7 @@ applier needs IAM-admin-ish credentials out-of-band — none are stored here. Re
 - **Upstream:** none — bootstraps the AWS CI identity from raw IAM (no module, no component inputs).
 - **Consumed by `infra-environments-dev`:** `role_arn` → the `AWS_ROLE_ARN` secret, used by
   `aws-actions/configure-aws-credentials@v6` (with `permissions: id-token: write`) so the pipeline
-  assumes this role for `vpc` / `ec2` plan + apply.
+  assumes this role for plan + apply of the components the policy above covers.
 
 <!-- BEGIN_TF_DOCS -->
 ## Inputs

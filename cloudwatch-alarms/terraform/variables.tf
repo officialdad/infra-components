@@ -38,7 +38,7 @@ variable "disk_alarm" {
     dimensions  = optional(map(string), {})
   })
   default     = null
-  description = "Per-instance alarm on a custom disk-used-percent metric; null (default) creates none. The metric comes from the CloudWatch agent, which the consuming environment installs. InstanceId is always added to the dimensions; dimensions adds the rest (for example path, device, fstype), which must match the published metric exactly or the alarm never sees data. threshold is a percentage."
+  description = "Per-instance alarm on a custom disk-used-percent metric; null (default) creates none. The consuming environment publishes the metric, usually with the CloudWatch agent. InstanceId is always added to the dimensions; dimensions adds the rest, and the set must match the published metric exactly or the alarm never sees data. {} matches only a series whose sole dimension is InstanceId, such as one from aws cloudwatch put-metric-data with only InstanceId, or from the CloudWatch agent with aggregation_dimensions = [[\"InstanceId\"]]. The agent's default series also carries path, device and fstype, for example { path = \"/\", device = \"nvme0n1p1\", fstype = \"xfs\" }. threshold is a percentage."
 
   validation {
     condition     = var.disk_alarm == null ? true : var.disk_alarm.threshold > 0 && var.disk_alarm.threshold <= 100
@@ -53,24 +53,18 @@ variable "disk_alarm" {
 
 variable "backup_age_alarm" {
   type = object({
-    namespace          = string
-    metric_name        = string
-    threshold          = number
-    dimensions         = optional(map(string), {})
-    period             = optional(number, 3600)
-    treat_missing_data = optional(string, "breaching")
+    namespace   = string
+    metric_name = string
+    threshold   = number
+    dimensions  = optional(map(string), {})
+    period      = optional(number, 3600)
   })
   default     = null
-  description = "One alarm on a custom backup-age metric that the consuming environment publishes; null (default) creates none. threshold uses the metric's own unit (for example seconds), so it has no default. dimensions are used verbatim. The publisher must emit at least one datapoint per period (seconds, default 3600). With treat_missing_data = breaching (default) a publisher that stops running raises the alarm, which is the failure this alarm exists to catch."
+  description = "One alarm on a custom backup-age metric that the consuming environment publishes; null (default) creates none. threshold uses the metric's own unit (for example seconds), so it has no default. dimensions are used verbatim. The publisher must emit at least one datapoint per period (seconds, default 3600). Missing data counts as breaching, so a publisher that stops running raises the alarm."
 
   validation {
     condition     = var.backup_age_alarm == null ? true : var.backup_age_alarm.threshold > 0
     error_message = "backup_age_alarm.threshold must be above 0."
-  }
-
-  validation {
-    condition     = var.backup_age_alarm == null ? true : contains(["breaching", "notBreaching", "ignore", "missing"], var.backup_age_alarm.treat_missing_data)
-    error_message = "backup_age_alarm.treat_missing_data must be one of breaching, notBreaching, ignore, missing."
   }
 
   validation {

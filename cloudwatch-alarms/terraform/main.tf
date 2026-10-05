@@ -105,8 +105,8 @@ resource "aws_cloudwatch_metric_alarm" "disk_used" {
   tags = local.common_tags
 }
 
-# Backup age is a gauge the environment publishes on a schedule. Missing data defaults to
-# breaching because a dead backup job stops publishing, and that silence is the failure to catch.
+# Backup age is a gauge the environment publishes on a schedule. Missing data is breaching because
+# a dead backup job stops publishing, and that silence is the failure to catch.
 resource "aws_cloudwatch_metric_alarm" "backup_age" {
   count = var.backup_age_alarm == null ? 0 : 1
 
@@ -120,7 +120,7 @@ resource "aws_cloudwatch_metric_alarm" "backup_age" {
   evaluation_periods  = 1
   threshold           = var.backup_age_alarm.threshold
   comparison_operator = "GreaterThanThreshold"
-  treat_missing_data  = var.backup_age_alarm.treat_missing_data
+  treat_missing_data  = "breaching"
 
   alarm_actions = [aws_sns_topic.alarms.arn]
   ok_actions    = [aws_sns_topic.alarms.arn]

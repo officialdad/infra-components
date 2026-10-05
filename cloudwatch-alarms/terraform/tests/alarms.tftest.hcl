@@ -158,7 +158,7 @@ run "backup_age_alarm" {
 
   assert {
     condition     = aws_cloudwatch_metric_alarm.backup_age[0].treat_missing_data == "breaching"
-    error_message = "A silent backup publisher must raise the alarm by default."
+    error_message = "A silent backup publisher must raise the alarm."
   }
 
   assert {
@@ -215,19 +215,4 @@ run "rejects_disk_instance_id_dimension" {
   }
 
   expect_failures = [var.disk_alarm]
-}
-
-run "rejects_bad_missing_data_mode" {
-  command = plan
-
-  variables {
-    backup_age_alarm = {
-      namespace          = "Custom/Backup"
-      metric_name        = "BackupAgeSeconds"
-      threshold          = 1
-      treat_missing_data = "sometimes"
-    }
-  }
-
-  expect_failures = [var.backup_age_alarm]
 }

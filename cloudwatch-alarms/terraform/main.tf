@@ -82,8 +82,8 @@ resource "aws_cloudwatch_metric_alarm" "status_check_instance" {
   tags = local.common_tags
 }
 
-# Missing data stays missing (no state change): a stopped instance or a restarting agent must not
-# page, and status_check_instance already covers an instance that is down.
+# Missing data moves the alarm to INSUFFICIENT_DATA, which notifies nobody: a stopped instance or a
+# restarting agent must not page, and status_check_instance already covers an instance that is down.
 resource "aws_cloudwatch_metric_alarm" "disk_used" {
   for_each = local.disk_alarm_instances
 

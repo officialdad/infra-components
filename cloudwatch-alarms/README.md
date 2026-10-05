@@ -15,7 +15,7 @@ email subscriptions** - the module never installs agents or publishes metrics, t
 - **A disk-used alarm per `instances` entry, opt-in** - set `disk_alarm` to get
   `<environment_name>-<key>-disk-used` on a custom metric, default `CWAgent` /
   `disk_used_percent` above `80`. Its `dimensions` must match the published series - see
-  [Entry shapes](#entry-shapes). `null` (default) creates none.
+  [Disk alarm dimensions](#disk-alarm-dimensions). `null` (default) creates none.
 - **One backup-age alarm, opt-in** - set `backup_age_alarm` to get `<environment_name>-backup-age`
   on a custom metric whose namespace, name, and threshold you supply. `null` (default) creates none.
 
@@ -25,11 +25,11 @@ email subscriptions** - the module never installs agents or publishes metrics, t
 > ⚠️ **`ec2:recover` has limits** - it does not recover instances with instance-store volumes, and
 > only some instance types support it. A recovery reboots the instance, so the topic is notified too.
 >
-> ⚠️ **The metrics must exist** - the disk metric needs the CloudWatch agent on the instance, and
-> the backup-age metric needs a publisher. An alarm whose `dimensions` do not match the published
-> metric exactly never sees data. Missing disk data is ignored. Missing backup-age data always raises
-> the alarm, so the publisher must emit a datapoint at least once per `period` (default `3600`
-> seconds).
+> ⚠️ **The metrics must exist** - the disk metric needs a publisher (usually the CloudWatch agent),
+> and the backup-age metric needs a publisher. An alarm whose `dimensions` do not match the
+> published metric exactly never sees data. Missing disk data moves the alarm to
+> `INSUFFICIENT_DATA`, which notifies nobody. Missing backup-age data always raises the alarm, so the
+> publisher must emit a datapoint at least once per `period` (default `3600` seconds).
 >
 > ⚠️ **The topic is not KMS-encrypted** - the AWS-managed SNS key blocks CloudWatch from publishing.
 > Alarm messages carry alarm names and metric values, no secrets.
@@ -58,6 +58,15 @@ The generated Inputs table collapses objects into one type. Per-field intent:
   - `threshold` (`80`) - percent used, above `0` and at most `100`.
   - `dimensions` (`{}`) - extra dimensions. `InstanceId` is added per instance and must not be set
     here.
+- `backup_age_alarm` (`null`) - one alarm for the environment.
+  - `namespace` (required) - namespace of the publisher's metric.
+  - `metric_name` (required) - metric name.
+  - `threshold` (required) - age limit in the metric's own unit. No default, because the unit is the
+    publisher's choice.
+  - `dimensions` (`{}`) - used verbatim, so add `InstanceId` here if the metric has it.
+  - `period` (`3600`) - seconds per datapoint window, a multiple of `60`.
+
+#### Disk alarm dimensions
 
 `disk_alarm = {}` matches only a series whose sole dimension is `InstanceId`. Two publishers emit
 one:
@@ -74,14 +83,6 @@ disk_alarm = {
   dimensions = { path = "/", device = "nvme0n1p1", fstype = "xfs" }
 }
 ```
-
-- `backup_age_alarm` (`null`) - one alarm for the environment.
-  - `namespace` (required) - namespace of the publisher's metric.
-  - `metric_name` (required) - metric name.
-  - `threshold` (required) - age limit in the metric's own unit. No default, because the unit is the
-    publisher's choice.
-  - `dimensions` (`{}`) - used verbatim, so add `InstanceId` here if the metric has it.
-  - `period` (`3600`) - seconds per datapoint window, a multiple of `60`.
 
 <!-- BEGIN_TF_DOCS -->
 ## Inputs

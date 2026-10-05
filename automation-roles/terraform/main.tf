@@ -129,22 +129,8 @@ data "aws_iam_policy_document" "permissions" {
     resources = ["arn:aws:s3:::${var.global.environment_name}-*"]
   }
 
-  # CloudWatch alarms: the cloudwatch-alarms component. DescribeAlarms has no resource-level
-  # scoping, so it gets its own "*" statement. Every write is scoped to <env>-* alarms. The
-  # tag actions are not matched by *Alarm* but the provider calls them on every alarm.
-  statement {
-    sid       = "CloudWatchAlarmsRead"
-    effect    = "Allow"
-    actions   = ["cloudwatch:DescribeAlarms"]
-    resources = ["*"]
-
-    condition {
-      test     = "StringEquals"
-      variable = "aws:RequestedRegion"
-      values   = local.allowed_regions
-    }
-  }
-
+  # CloudWatch alarms: the cloudwatch-alarms component. Every alarm action is scoped to <env>-*
+  # alarms. The tag actions are not matched by *Alarm* but the provider calls them on every alarm.
   statement {
     sid    = "CloudWatchAlarms"
     effect = "Allow"

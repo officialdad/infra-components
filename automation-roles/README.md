@@ -22,20 +22,23 @@ trust policy, and a least-privilege permissions policy.
   (the repo's `main` branch for apply + `pull_request` events for plan) — *not* a bare repo `:*`
   wildcard. Override `allowed_subjects` to change.
 - An **`aws_iam_policy`** (least-privilege, first pass) attached to the role, granting only what
-  `vpc` + `ec2` + `ebs-volume` need: EC2/VPC (subnets, route tables, IGW, NAT, EIP, security
-  groups, instances, volumes), IAM scoped to `<env>-*` roles/instance-profiles (for the `ec2`
-  module's instance profile and the `ebs-volume` DLM role, incl. `PassRole`), `dlm:*` (for
-  `ebs-volume` snapshot policies), and SSM read for public AMI parameters. No
-  `AdministratorAccess`. Tighten iteratively from plan errors.
-  > ⚠️ **EC2 and DLM are region-bound.** `ec2:*` and `dlm:*` carry an `aws:RequestedRegion`
-  > condition of `deploy_region` plus `additional_regions`. A unit that overrides
-  > `global.deploy_region` to another region fails CI plan with `UnauthorizedOperation` on
-  > `ec2:Describe*` until that region is listed in `additional_regions` and this component is
-  > re-applied.
+  `vpc` + `ec2` + `ebs-volume` + `s3-bucket` + `cloudwatch-alarms` need: EC2/VPC (subnets, route
+  tables, IGW, NAT, EIP, security groups, instances, volumes), IAM scoped to `<env>-*`
+  roles/instance-profiles (for the `ec2` module's instance profile and the `ebs-volume` DLM role,
+  incl. `PassRole`), `dlm:*` (for `ebs-volume` snapshot policies), `s3:*` on `<env>-*` buckets,
+  CloudWatch alarm actions on `<env>-*` alarms, `sns:*` on `<env>-*` topics, and SSM read for
+  public AMI parameters. No `AdministratorAccess`. Tighten iteratively from plan errors.
+  > ⚠️ **EC2, DLM, CloudWatch and SNS are region-bound.** `ec2:*`, `dlm:*`, the alarm actions and
+  > `sns:*` carry an `aws:RequestedRegion` condition of `deploy_region` plus `additional_regions`.
+  > A unit that overrides `global.deploy_region` to another region fails CI plan with
+  > `UnauthorizedOperation` on `ec2:Describe*` until that region is listed in `additional_regions`
+  > and this component is re-applied. S3 is scoped by bucket name only, with no region condition.
   >
-  > ⚠️ **Re-apply by hand before the first `snapshot`.** An existing CI role has no `dlm:*` until
-  > this component is re-applied. Without it, `ebs-volume` plans green, then its apply creates the
-  > DLM IAM role and fails on the DLM policy.
+  > ⚠️ **Re-apply by hand before the first `snapshot`, `s3-bucket` or `cloudwatch-alarms`.** An
+  > existing CI role has no `dlm:*`, `s3:*`, alarm or `sns:*` permissions until this component is
+  > re-applied. Without them the plan passes, then the labelled apply fails: `ebs-volume` creates
+  > the DLM IAM role and fails on the DLM policy, and the S3, alarm and SNS resources fail with
+  > `AccessDenied`.
 
 ## Auth
 

@@ -21,6 +21,9 @@ locals {
 
   oidc_arn = var.create_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : var.existing_oidc_provider_arn
 
+  # Regions the region-bound statements (EC2, DLM, CloudWatch, SNS) allow.
+  allowed_regions = distinct(concat([var.global.deploy_region], var.additional_regions))
+
   # IAM resources the ec2 component's instance profile lives under, scoped to this account + the
   # env name prefix so the CI role can only touch its own roles/profiles.
   account_id = data.aws_caller_identity.current.account_id
@@ -28,6 +31,9 @@ locals {
     "arn:aws:iam::${local.account_id}:role/${var.global.environment_name}-*",
     "arn:aws:iam::${local.account_id}:instance-profile/${var.global.environment_name}-*",
   ]
+
+  # CloudWatch alarms the cloudwatch-alarms component creates, any region the condition allows.
+  alarm_scope = "arn:aws:cloudwatch:*:${local.account_id}:alarm:${var.global.environment_name}-*"
 }
 
 # Account-global singleton federating GitHub Actions OIDC tokens. thumbprint_list is intentionally
@@ -92,7 +98,7 @@ data "aws_iam_policy_document" "permissions" {
     condition {
       test     = "StringEquals"
       variable = "aws:RequestedRegion"
-      values   = distinct(concat([var.global.deploy_region], var.additional_regions))
+      values   = local.allowed_regions
     }
   }
 
@@ -108,7 +114,68 @@ data "aws_iam_policy_document" "permissions" {
     condition {
       test     = "StringEquals"
       variable = "aws:RequestedRegion"
-      values   = distinct(concat([var.global.deploy_region], var.additional_regions))
+      values   = local.allowed_regions
+    }
+  }
+
+  # S3: the s3-bucket component creates buckets and their config (versioning, lifecycle, public
+  # access block, policy). Scoped by name to <env>-* buckets and their objects (the trailing * also
+  # matches "/key"). No region condition: bucket names are global and S3 calls to a bucket in
+  # another region redirect.
+  statement {
+    sid       = "S3Buckets"
+    effect    = "Allow"
+    actions   = ["s3:*"]
+    resources = ["arn:aws:s3:::${var.global.environment_name}-*"]
+  }
+
+  # CloudWatch alarms: the cloudwatch-alarms component. DescribeAlarms has no resource-level
+  # scoping, so it gets its own "*" statement. Every write is scoped to <env>-* alarms. The
+  # tag actions are not matched by *Alarm* but the provider calls them on every alarm.
+  statement {
+    sid       = "CloudWatchAlarmsRead"
+    effect    = "Allow"
+    actions   = ["cloudwatch:DescribeAlarms"]
+    resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values   = local.allowed_regions
+    }
+  }
+
+  statement {
+    sid    = "CloudWatchAlarms"
+    effect = "Allow"
+    actions = [
+      "cloudwatch:*Alarm*",
+      "cloudwatch:ListTagsForResource",
+      "cloudwatch:TagResource",
+      "cloudwatch:UntagResource",
+    ]
+    resources = [local.alarm_scope]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values   = local.allowed_regions
+    }
+  }
+
+  # SNS: the cloudwatch-alarms component's alert topic and its email subscriptions. Scoped to
+  # <env>-* topics in this account (a subscription ARN extends its topic ARN, so the same pattern
+  # covers it), bound by region like VpcAndEc2.
+  statement {
+    sid       = "SnsTopics"
+    effect    = "Allow"
+    actions   = ["sns:*"]
+    resources = ["arn:aws:sns:*:${local.account_id}:${var.global.environment_name}-*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values   = local.allowed_regions
     }
   }
 

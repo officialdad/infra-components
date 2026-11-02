@@ -187,8 +187,9 @@ Tags are **repo-wide** (not per-component); each `//<component>/terraform?ref=<t
 independently, so an unchanged component validly stays at an older tag. Cut releases with
 **`/release X.Y.Z`** (or `scripts/release.sh X.Y.Z`) — it **generates** the `## [X.Y.Z]` section from
 the release's Conventional Commits with git-cliff (requires git-cliff locally — see README
-"Toolchain"), splices it under `## [Unreleased]`, fixes the compare links, and commits + tags
-**locally** (nothing pushed); review, then `git push origin main vX.Y.Z`. The changelog is generated,
+"Toolchain"), splices it under `## [Unreleased]`, fixes the compare links, and commits on the branch
+`release/vX.Y.Z` (nothing pushed, nothing tagged); review, then `scripts/release.sh X.Y.Z --publish`
+opens a PR, squash-merges it, tags the merge commit and pushes the tag (`main` takes no direct pushes). The changelog is generated,
 never hand-curated; history ≤ `v0.6.0` is frozen. A native **`pre-push` guard**
 (`scripts/check-release-tag.sh`, installed by `scripts/setup-hooks.sh`) blocks a tag push whose
 `## [X.Y.Z] - <date>` section is missing from the CHANGELOG. The tag push publishes the GitHub Release

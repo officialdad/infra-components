@@ -8,8 +8,10 @@ description: Cut a versioned release of this module library — generate the CHA
 Automates steps 3–4 of README's **Versioning & releasing** flow. The mechanics live in
 `scripts/release.sh`: it **generates** the new CHANGELOG section from the unreleased Conventional
 Commits with **git-cliff** (`cliff.toml`), splices it under `## [Unreleased]`, fixes the compare
-links, commits, and tags — **no push, no hand-curation**. Your job is the judgment around it: pick
-the version, confirm it has soaked, and confirm the irreversible push.
+links, and commits on the branch `release/vX.Y.Z` — **no push, no tag, no hand-curation**.
+`--publish` then opens a PR, squash-merges it, and tags the merge commit (`main` takes no direct
+pushes). Your job is the judgment around it: pick the version, confirm it has soaked, and confirm
+the irreversible publish.
 
 > **Single source of truth.** The changelog is generated from commit subjects, not curated. The same
 > git-cliff config backs the GitHub Release, so `CHANGELOG.md` == the GitHub Release by construction.
@@ -21,6 +23,7 @@ the version, confirm it has soaked, and confirm the irreversible push.
 - **git-cliff is installed** (`git-cliff --version`). `scripts/release.sh` needs it to generate the
   section and aborts with an install hint if it's missing (see README "Toolchain").
 - On `main`, clean tree, in sync with `origin/main`. (`scripts/release.sh` re-checks and aborts if not.)
+- `gh` is logged in (`gh auth status`). `--publish` opens and merges a PR with it.
 - The change has **soaked in `infra-environments-dev`**. If you can't confirm it has, **ASK the
   user** — never tag something that hasn't actually run in dev.
 - There are **consumer-facing commits since the last tag** (`feat`/`fix`/`refactor`/`perf`/`revert`/
@@ -42,13 +45,16 @@ State your proposed bump and **get the user's confirmation** before proceeding.
 1. Preview: `scripts/release.sh X.Y.Z --dry-run` — shows the **generated section** + the CHANGELOG
    diff. If an entry reads poorly, the fix is the commit subject (amend before tagging), not the file.
 2. Cut: `scripts/release.sh X.Y.Z` — generates `## [X.Y.Z] - <today>` from the commits, splices it,
-   fixes the compare links, commits `chore(release): vX.Y.Z`, and tags `vX.Y.Z`. **Nothing is pushed.**
-3. Show `git show vX.Y.Z --stat`. This is the last reversible point:
-   `git tag -d vX.Y.Z && git reset --hard HEAD~1`.
+   fixes the compare links, and commits `chore(release): vX.Y.Z` on the branch `release/vX.Y.Z`.
+   **Nothing is pushed and nothing is tagged.**
+3. Show `git show --stat`. This is the last reversible point:
+   `git switch main && git branch -D release/vX.Y.Z`.
 
 ## 4. Publish — only after explicit user confirmation (irreversible)
-`git push origin main vX.Y.Z`
-- The **`pre-push` guard** refuses the push unless `CHANGELOG.md` has the matching `## [X.Y.Z] - <date>`
+`scripts/release.sh X.Y.Z --publish`
+- It pushes `release/vX.Y.Z`, opens a PR, squash-merges it (or queues the merge behind a pending
+  required check), waits for the merge, then tags the **merge commit** and pushes the tag.
+- The **`pre-push` guard** refuses the tag push unless `CHANGELOG.md` has the matching `## [X.Y.Z] - <date>`
   section (it will pass — you just generated it).
 - The pushed tag triggers `.github/workflows/changelog.yml`'s `release` job, which publishes the
   **GitHub Release** from the same git-cliff config — so the GitHub Release matches the CHANGELOG

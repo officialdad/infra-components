@@ -146,8 +146,9 @@ independently.
 
 ### Releasing
 
-Steps 3–4 (generate the CHANGELOG section, commit, tag) are automated — you pick the version and
-confirm the irreversible push; the tooling does the rest. One-time per clone: install **git-cliff**
+Steps 3–4 (generate the CHANGELOG section, commit, PR, tag) are automated — you pick the version and
+confirm the irreversible publish; the tooling does the rest. `main` takes changes through a pull
+request only, so the release commit goes through a PR and only the tag is pushed directly. One-time per clone: install **git-cliff**
 (see [Toolchain](#toolchain)) and run [`scripts/setup-hooks.sh`](./scripts/setup-hooks.sh) to install
 the git hooks (Claude Code runs it on session start).
 
@@ -157,17 +158,19 @@ the git hooks (Claude Code runs it on session start).
    [`cliff.toml`](./cliff.toml).
 2. `infra-environments-dev` (tracks `main`) picks it up — apply and let it soak.
 3. Cut the release from `main` (after it has soaked):
-   - In Claude Code: **`/release X.Y.Z`** — previews the generated section, then pushes on your confirm.
+   - In Claude Code: **`/release X.Y.Z`** — previews the generated section, then publishes on your confirm.
    - By hand: **`scripts/release.sh X.Y.Z`**.
 
    Either way [`scripts/release.sh`](./scripts/release.sh) **generates** the new
    `## [X.Y.Z] - <today>` section from the unreleased Conventional Commits with git-cliff, splices it
-   under `## [Unreleased]`, fixes the two compare links, and commits `chore(release): vX.Y.Z` + tags
-   `vX.Y.Z` — **locally, nothing pushed**. No hand-curation: the commit subjects are the entries, and
-   history ≤ `v0.6.0` is frozen (only the new section is generated). Review with `git show vX.Y.Z`;
-   undo with `git tag -d vX.Y.Z && git reset --hard HEAD~1`.
-4. Publish: `git push origin main vX.Y.Z` (branch + tag atomically — avoids the tag landing on a
-   different commit if something races). A **`pre-push` guard**
+   under `## [Unreleased]`, fixes the two compare links, and commits `chore(release): vX.Y.Z` on the
+   branch `release/vX.Y.Z` — **locally, nothing pushed, no tag yet**. No hand-curation: the commit subjects are the entries, and
+   history ≤ `v0.6.0` is frozen (only the new section is generated). Review with `git show`;
+   undo with `git switch main && git branch -D release/vX.Y.Z`.
+4. Publish: `scripts/release.sh X.Y.Z --publish` (needs `gh` logged in). It pushes the
+   `release/vX.Y.Z` branch, opens a PR, squash-merges it, then tags the **merge commit** and pushes the
+   tag. Tagging the merge commit, not the current `main`, avoids the tag landing on a different commit
+   if another PR merges meanwhile. A **`pre-push` guard**
    ([`scripts/check-release-tag.sh`](./scripts/check-release-tag.sh)) refuses the push unless
    `CHANGELOG.md` has the matching `## [X.Y.Z] - <date>` section. The pushed tag triggers
    [`changelog.yml`](./.github/workflows/changelog.yml), which publishes the **GitHub Release** from

@@ -135,7 +135,7 @@ jobs:
         with:
           globs: |
             README.md
-            CLAUDE.md
+            AGENTS.md
             */README.md
 
   # Canary for issue #21: the local pre-commit Terraform hooks once reported "(no files to check)" on a

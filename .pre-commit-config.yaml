@@ -42,13 +42,13 @@ repos:
     hooks:
       - id: actionlint
 
-  # Markdown style for the human docs (component READMEs + root README + CLAUDE.md). Node-based, so
+  # Markdown style for the human docs (component READMEs + root README + AGENTS.md). Node-based, so
   # pre-commit builds it in an isolated env — no global install. Config: .markdownlint.yaml.
   - repo: https://github.com/DavidAnson/markdownlint-cli2
     rev: v0.22.1
     hooks:
       - id: markdownlint-cli2
-        files: '(^README\.md$|^CLAUDE\.md$|^[^/]+/README\.md$)'
+        files: '(^README\.md$|^AGENTS\.md$|^[^/]+/README\.md$)'
 
   # Component README docs: regenerate the Inputs/Outputs tables from .tf (terraform-docs, graceful if
   # absent) and assert each README's required structure. See scripts/gen-docs.sh, check-readme-structure.sh.

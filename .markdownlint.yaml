@@ -1,4 +1,4 @@
-# markdownlint config for the human docs (component READMEs + root README + CHANGELOG + CLAUDE.md).
+# markdownlint config for the human docs (component READMEs + root README + CHANGELOG + AGENTS.md).
 # Scope is set by the pre-commit `files:` regex and the CI globs — vendored .agents/.claude skills and
 # the .github template are NOT linted. Tuned for prose plus terraform-docs-generated tables.
 default: true

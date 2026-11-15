@@ -12,12 +12,19 @@ on:
     branches: [main]
     paths: ['.github/**']
 
+# A new push to a PR cancels its superseded run. Pushes to main get a unique group per run, so a
+# merge never cancels a run already in flight.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('actionlint-pr-{0}', github.event.pull_request.number) || format('actionlint-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
 
 jobs:
   actionlint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
 

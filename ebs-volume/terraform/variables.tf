@@ -7,6 +7,12 @@ variable "global" {
   description = "Environment-wide context injected by the environments repo (name, region, tags)."
 }
 
+variable "dlm_role_name" {
+  type        = string
+  description = "Name of the IAM role DLM snapshots assume. Null = \"<environment_name>-ebs-volume-dlm\"."
+  default     = null
+}
+
 variable "volumes" {
   type = map(object({
     availability_zone = string

@@ -11,6 +11,8 @@ locals {
   # DLM selects volumes by the dedicated Backup tag, never Name: Name is what the instance
   # attaches by and can drift, and a drifted Name would silently stop snapshots with no error.
   snapshot_volumes = { for k, v in var.volumes : k => v.snapshot if v.snapshot != null }
+
+  dlm_role_name = coalesce(var.dlm_role_name, "${var.global.environment_name}-ebs-volume-dlm")
 }
 
 # One standalone EBS volume per entry, in its own state — decoupled from any EC2
@@ -42,7 +44,7 @@ resource "aws_ebs_volume" "this" {
 resource "aws_iam_role" "dlm" {
   count = length(local.snapshot_volumes) > 0 ? 1 : 0
 
-  name = "${var.global.environment_name}-ebs-volume-dlm"
+  name = local.dlm_role_name
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
